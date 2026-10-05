@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="KLASIK CAFE barista dashboard.">
+  <title>Barista Dashboard | KLASIK CAFE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/barista.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js" defer></script>
+  <script src="js/script.js" defer></script>
+  <script src="js/barista.js" defer></script>
+</head>
+<body class="barista-body">
+  <div class="barista-shell">
+    <aside class="barista-sidebar">
+      <div class="sidebar-brand">
+        <img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo">
+      </div>
+      <nav class="sidebar-nav" aria-label="Barista navigation">
+        <a href="#barista-dashboard" class="active">Dashboard</a>
+        <a href="#barista-orders">New Orders</a>
+        <a href="#barista-orders">Preparing</a>
+        <a href="#barista-orders">Ready</a>
+        <a href="#barista-orders">Completed</a>
+        <a href="#barista-profile">Profile</a>
+        <a href="login.html">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="barista-main">
+      <header class="barista-topbar">
+        <div>
+          <p class="eyebrow eyebrow-blue"><span></span> BARISTA PANEL</p>
+          <h1>Dashboard</h1>
+        </div>
+      </header>
+
+      <section id="barista-dashboard" class="stats-grid">
+        <article class="stat-card">
+          <span>New Orders</span>
+          <strong>8</strong>
+        </article>
+        <article class="stat-card">
+          <span>Preparing</span>
+          <strong>5</strong>
+        </article>
+        <article class="stat-card">
+          <span>Ready</span>
+          <strong>3</strong>
+        </article>
+        <article class="stat-card">
+          <span>Completed Today</span>
+          <strong>24</strong>
+        </article>
+      </section>
+
+      <section id="barista-orders" class="panel barista-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> ORDER QUEUE</p>
+            <h2>Incoming <em>Orders</em></h2>
+          </div>
+        </div>
+
+        <div class="barista-layout">
+          <div id="barista-order-queue" class="order-queue"></div>
+          <aside id="barista-order-detail" class="detail-panel"></aside>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

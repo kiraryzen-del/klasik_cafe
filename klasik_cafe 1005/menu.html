@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="Explore the complete KLASIK CAFE menu of coffee, matcha, and treats.">
+  <title>Menu | KLASIK CAFE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/customer.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js" defer></script>
+  <script src="js/menu-products.js" defer></script>
+  <script src="js/script.js" defer></script>
+  <script src="js/customer.js" defer></script>
+  <script src="js/menu-page.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-wrap">
+      <a class="brand" href="index.html#home" aria-label="KLASIK CAFE home">
+        <img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo">
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav">
+        <span></span><span></span><span></span>
+      </button>
+      <nav id="primary-nav" class="primary-nav" aria-label="Main navigation">
+        <a class="nav-link" href="index.html#home">Home</a>
+        <a class="nav-link active" href="menu.html" aria-current="page">Menu</a>
+        <a class="nav-link" href="index.html#story">About Us</a>
+        <a class="nav-link" href="index.html#location">Location</a>
+        <div class="nav-actions">
+          <a class="button button-outline button-small cart-trigger" href="orders.html" aria-label="Review your order">
+            <span aria-hidden="true">🛒</span>
+            <span>Cart</span>
+            <span class="cart-badge" id="cart-count-badge">0</span>
+          </a>
+          <a class="button button-outline button-small" href="login.html">Login</a>
+          <a class="button button-primary button-small" href="signup.html">Sign Up</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div id="menu-content" aria-live="polite">
+      <p class="page-width menu-loading">Loading the menu...</p>
+    </div>
+  </main>
+
+  <div id="customer-customization-modal" class="customer-modal" hidden>
+    <div class="customer-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="customer-customize-title">
+      <button class="customer-modal-close" type="button" aria-label="Close customization">×</button>
+      <h3 id="customer-customize-title">Customize Item</h3>
+      <div class="customer-option-block">
+        <h4>Size</h4>
+        <div class="customer-option-row">
+          <label><input type="radio" name="custom-size" value="Small" checked> Small</label>
+          <label><input type="radio" name="custom-size" value="Medium"> Medium</label>
+          <label><input type="radio" name="custom-size" value="Large"> Large</label>
+        </div>
+      </div>
+      <div class="customer-option-block">
+        <h4>Milk</h4>
+        <div class="customer-option-row">
+          <label><input type="radio" name="custom-milk" value="Regular" checked> Regular</label>
+          <label><input type="radio" name="custom-milk" value="Oat"> Oat</label>
+          <label><input type="radio" name="custom-milk" value="Soy"> Soy</label>
+        </div>
+      </div>
+      <div class="customer-option-block">
+        <h4>Sweetness</h4>
+        <div class="customer-option-row">
+          <label><input type="radio" name="custom-sweetness" value="0%" checked> 0%</label>
+          <label><input type="radio" name="custom-sweetness" value="25%"> 25%</label>
+          <label><input type="radio" name="custom-sweetness" value="50%"> 50%</label>
+          <label><input type="radio" name="custom-sweetness" value="75%"> 75%</label>
+          <label><input type="radio" name="custom-sweetness" value="100%"> 100%</label>
+        </div>
+      </div>
+      <div class="customer-option-block">
+        <h4>Ice</h4>
+        <div class="customer-option-row">
+          <label><input type="radio" name="custom-ice" value="No Ice" checked> No Ice</label>
+          <label><input type="radio" name="custom-ice" value="Less Ice"> Less Ice</label>
+          <label><input type="radio" name="custom-ice" value="Regular Ice"> Regular Ice</label>
+          <label><input type="radio" name="custom-ice" value="Extra Ice"> Extra Ice</label>
+        </div>
+      </div>
+      <div class="customer-option-block">
+        <h4>Add-ons</h4>
+        <div class="customer-option-row customer-option-stack">
+          <label><input type="checkbox" name="custom-addon" data-price="30" value="Extra Shot"> Extra Shot +₱30</label>
+          <label><input type="checkbox" name="custom-addon" data-price="20" value="Caramel"> Caramel +₱20</label>
+          <label><input type="checkbox" name="custom-addon" data-price="20" value="Vanilla"> Vanilla +₱20</label>
+          <label><input type="checkbox" name="custom-addon" data-price="20" value="Whipped Cream"> Whipped Cream +₱20</label>
+        </div>
+      </div>
+      <div class="customer-option-block customer-qty-row">
+        <h4>Quantity</h4>
+        <div class="customer-qty-control">
+          <button type="button" class="customer-qty-button" data-qty-action="decrease">−</button>
+          <span id="customer-modal-qty">1</span>
+          <button type="button" class="customer-qty-button" data-qty-action="increase">+</button>
+        </div>
+      </div>
+      <div class="customer-modal-total-row"><span>Total</span><strong id="customer-modal-total">₱0</strong></div>
+      <button class="button button-primary button-wide" id="customer-add-to-order" type="button">Add to Order</button>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="page-width footer-main">
+      <div class="footer-brand-block"><a class="brand brand-footer" href="index.html#home"><img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo"></a><p>Your classic coffee experience.<br>Made with care in San Ildefonso.</p></div>
+      <div class="footer-column"><h2>Explore</h2><a href="menu.html">Our menu</a><a href="index.html#coffee">Our coffee</a><a href="index.html#story">Our story</a><a href="index.html#location">Location</a></div>
+      <div class="footer-column"><h2>Say hello</h2><a href="tel:+639123456789">0912-345-6789</a><p>Beside Chapel, Matimbubong<br>San Ildefonso, Bulacan</p><p>Every day, 8 AM – 9 PM</p></div>
+      <div class="footer-column"><h2>Your account</h2><a href="login.html">Login</a><a href="signup.html">Create an account</a></div>
+    </div>
+    <div class="page-width footer-bottom"><span>© 2026 KLASIK CAFE. All Rights Reserved.</span></div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="KLASIK CAFE admin dashboard.">
+  <title>Admin Dashboard | KLASIK CAFE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js" defer></script>
+  <script src="js/script.js" defer></script>
+  <script src="js/admin.js" defer></script>
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="sidebar-brand">
+        <img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo">
+      </div>
+      <nav class="sidebar-nav" aria-label="Admin navigation">
+        <a href="#admin-dashboard" class="active">Dashboard</a>
+        <a href="#menu-management">Menu Management</a>
+        <a href="#admin-orders">Orders</a>
+        <a href="#admin-reviews">Reviews</a>
+        <a href="#admin-suggestions">Suggestions</a>
+        <a href="#admin-customers">Customers</a>
+        <a href="#admin-cafe-info">Café Information</a>
+        <a href="#admin-settings">Settings</a>
+        <a href="login.html">Logout</a>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <p class="eyebrow eyebrow-blue"><span></span> ADMIN PANEL</p>
+          <h1>Dashboard</h1>
+        </div>
+        <button class="button button-primary" type="button" id="add-product-trigger">Add Product</button>
+      </header>
+
+      <section id="admin-dashboard" class="stats-grid">
+        <article class="stat-card">
+          <span>Total Products</span>
+          <strong>24</strong>
+        </article>
+        <article class="stat-card">
+          <span>Available Items</span>
+          <strong>20</strong>
+        </article>
+        <article class="stat-card">
+          <span>Today's Orders</span>
+          <strong>35</strong>
+        </article>
+        <article class="stat-card">
+          <span>Customer Reviews</span>
+          <strong>128</strong>
+        </article>
+        <article class="stat-card">
+          <span>Suggestions</span>
+          <strong>12</strong>
+        </article>
+      </section>
+
+      <section id="menu-management" class="panel admin-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> STOCK</p>
+            <h2>Menu <em>Management</em></h2>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Availability</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-product-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="admin-orders" class="panel admin-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> ORDER SUMMARY</p>
+            <h2>Recent <em>Orders</em></h2>
+          </div>
+        </div>
+        <ul class="mini-list">
+          <li><span>Order #1024</span><strong>Pending</strong></li>
+          <li><span>Order #1023</span><strong>Preparing</strong></li>
+          <li><span>Order #1022</span><strong>Ready</strong></li>
+          <li><span>Order #1021</span><strong>Completed</strong></li>
+        </ul>
+      </section>
+
+      <section id="admin-reviews" class="panel admin-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> FEEDBACK</p>
+            <h2>Customer <em>Reviews</em></h2>
+          </div>
+        </div>
+        <div id="admin-review-list" class="admin-review-list"></div>
+      </section>
+
+      <section id="admin-suggestions" class="panel admin-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> IDEAS</p>
+            <h2>Customer <em>Suggestions</em></h2>
+          </div>
+        </div>
+        <div id="admin-suggestion-list" class="admin-suggestion-list"></div>
+      </section>
+
+      <section id="admin-customers" class="panel admin-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> LOYALTY</p>
+            <h2>Customer <em>Acquisition</em></h2>
+          </div>
+        </div>
+        <ul class="mini-list">
+          <li><span>New Members</span><strong>96</strong></li>
+          <li><span>Returning</span><strong>240</strong></li>
+          <li><span>Top Buyer</span><strong>Juan Dela Cruz</strong></li>
+        </ul>
+      </section>
+
+      <section id="admin-cafe-info" class="panel admin-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> BUSINESS INFO</p>
+            <h2>Café <em>Information</em></h2>
+          </div>
+        </div>
+
+        <form id="cafe-info-form" class="admin-form">
+          <div class="form-grid-two">
+            <label>Café Name<input type="text" id="cafe-name" name="cafeName"></label>
+            <label>Address<input type="text" id="cafe-address" name="address"></label>
+            <label>Opening Hours<input type="text" id="cafe-hours" name="hours"></label>
+            <label>Contact Number<input type="tel" id="cafe-phone" name="phone"></label>
+            <label>Facebook<input type="text" id="cafe-facebook" name="facebook"></label>
+            <label>Instagram<input type="text" id="cafe-instagram" name="instagram"></label>
+            <label>TikTok<input type="text" id="cafe-tiktok" name="tiktok"></label>
+            <label class="full-width">Description<textarea id="cafe-description" name="description" rows="4"></textarea></label>
+          </div>
+          <button type="submit" class="button button-primary">Save Changes</button>
+        </form>
+      </section>
+
+      <section id="admin-settings" class="panel admin-panel">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> SYSTEM</p>
+            <h2>Store <em>Settings</em></h2>
+          </div>
+        </div>
+        <ul class="mini-list">
+          <li><span>Theme</span><strong>Royal Blue</strong></li>
+          <li><span>Mobile Menu</span><strong>Enabled</strong></li>
+          <li><span>Auto Save</span><strong>On</strong></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <div id="product-modal" class="modal-backdrop" hidden>
+    <div class="modal-dialog admin-modal" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+      <button class="modal-close" type="button" aria-label="Close product form">×</button>
+      <h3 id="product-modal-title">Add Product</h3>
+      <form id="product-form" class="admin-form modal-form">
+        <input type="hidden" id="product-id">
+        <label>Product Name<input type="text" id="product-name" required></label>
+        <label>Main Category<select id="product-main-category">
+          <option value="coffee">Coffee</option>
+          <option value="non-coffee">Non-Coffee</option>
+          <option value="matcha">Matcha Series</option>
+          <option value="pastries">Pastries</option>
+          <option value="add-ons">Add-ons</option>
+        </select></label>
+        <label>Subcategory<select id="product-subcategory">
+          <option value="iced-coffee">Iced Coffee</option>
+          <option value="hot-coffee">Hot Coffee</option>
+          <option value="espesyal">Espesyal</option>
+          <option value="matcha">Matcha Series</option>
+          <option value="smores">Smores</option>
+          <option value="cookies">Cookies</option>
+          <option value="cheesecakes">Cheesecakes</option>
+          <option value="add-ons">Add-ons</option>
+        </select></label>
+        <label>Description<textarea id="product-description" rows="4"></textarea></label>
+        <label>Price<input type="number" id="product-price" min="1" step="1"></label>
+        <label>Image<input type="text" id="product-image" placeholder="image-name.jpg"></label>
+        <label>Availability<select id="product-availability">
+          <option value="Available">Available</option>
+          <option value="Unavailable">Unavailable</option>
+        </select></label>
+        <div class="modal-actions">
+          <button type="button" class="button button-outline" id="cancel-product-modal">Cancel</button>
+          <button type="submit" class="button button-primary">Add Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

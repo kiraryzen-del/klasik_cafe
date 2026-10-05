@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="KLASIK CAFE customer dashboard and menu ordering experience.">
+  <title>Customer Dashboard | KLASIK CAFE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/customer.css">
+  <script src="js/script.js" defer></script>
+  <script src="js/customer.js" defer></script>
+</head>
+<body class="customer-body">
+  <header class="customer-header">
+    <div class="customer-header-inner">
+      <a class="brand" href="index.html" aria-label="KLASIK CAFE home">
+        <img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo">
+      </a>
+      <nav class="customer-nav" aria-label="Customer navigation">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="#menu-section">Menu</a>
+        <a class="nav-link" href="#orders-section">My Orders</a>
+        <a class="nav-link" href="#reviews-section">Reviews</a>
+        <a class="nav-link" href="#suggestions-section">Suggestions</a>
+        <a class="nav-link" href="#profile-section">Profile</a>
+        <a class="button button-primary button-small" href="login.html">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="customer-main page-shell">
+    <section class="welcome-panel panel">
+      <div>
+        <p class="eyebrow eyebrow-blue"><span></span> WELCOME</p>
+        <h1>Welcome to <em>KLASIK CAFE!</em></h1>
+        <p class="welcome-copy">Good afternoon! What would you like to order today?</p>
+      </div>
+    </section>
+
+    <section class="quick-access-grid" aria-label="Customer quick actions">
+      <button class="quick-card" type="button" data-scroll-target="menu-section">
+        <span>Browse Menu</span>
+      </button>
+      <button class="quick-card" type="button" data-scroll-target="orders-section">
+        <span>My Orders</span>
+      </button>
+      <button class="quick-card" type="button" data-scroll-target="reviews-section">
+        <span>Leave a Review</span>
+      </button>
+      <button class="quick-card" type="button" data-scroll-target="suggestions-section">
+        <span>Send a Suggestion</span>
+      </button>
+    </section>
+
+    <section class="panel" id="menu-section" aria-labelledby="menu-title">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow eyebrow-blue"><span></span> ORDER YOUR FAVORITES</p>
+          <h2 id="menu-title">Customer <em>Menu</em></h2>
+        </div>
+      </div>
+      <div class="customer-category-bar" aria-label="Menu categories">
+        <button class="category-button is-active" type="button" data-menu-category="all">All</button>
+        <button class="category-button" type="button" data-menu-category="coffee">Coffee</button>
+        <button class="category-button" type="button" data-menu-category="non-coffee">Non-Coffee</button>
+        <button class="category-button" type="button" data-menu-category="pastries">Pastries</button>
+        <button class="category-button" type="button" data-menu-category="add-ons">Add-ons</button>
+      </div>
+      <div id="customer-menu-grid" class="customer-menu-grid"></div>
+    </section>
+
+    <section class="orders-layout">
+      <div class="panel" id="orders-section" aria-labelledby="orders-title">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> TRACK YOUR ORDER</p>
+            <h2 id="orders-title">My <em>Orders</em></h2>
+          </div>
+        </div>
+        <div id="customer-orders-list" class="order-list"></div>
+      </div>
+
+      <aside class="panel" id="profile-section" aria-labelledby="profile-title">
+        <div class="section-header compact-header">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> ACCOUNT</p>
+            <h2 id="profile-title">Customer <em>Profile</em></h2>
+          </div>
+        </div>
+        <div class="profile-card">
+          <div class="profile-avatar">JD</div>
+          <div>
+            <h3>Juan Dela Cruz</h3>
+            <p>Member since 2024</p>
+          </div>
+        </div>
+        <ul class="profile-meta">
+          <li><span>Email</span><strong>juan@example.com</strong></li>
+          <li><span>Favorite order</span><strong>Spanish Latte</strong></li>
+          <li><span>Preferred pickup</span><strong>Takeaway</strong></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="panel" id="reviews-section" aria-labelledby="reviews-title">
+      <div class="section-header compact-header">
+        <div>
+          <p class="eyebrow eyebrow-blue"><span></span> WE LOVE FEEDBACK</p>
+          <h2 id="reviews-title">Reviews &amp; <em>Comments</em></h2>
+        </div>
+      </div>
+
+      <div class="review-layout">
+        <form id="customer-review-form" class="customer-form" novalidate>
+          <div class="star-rating" aria-label="Rate this experience">
+            <button class="star-button" type="button" data-rating="1" aria-label="1 star">★</button>
+            <button class="star-button" type="button" data-rating="2" aria-label="2 stars">★</button>
+            <button class="star-button" type="button" data-rating="3" aria-label="3 stars">★</button>
+            <button class="star-button" type="button" data-rating="4" aria-label="4 stars">★</button>
+            <button class="star-button" type="button" data-rating="5" aria-label="5 stars">★</button>
+          </div>
+          <input type="hidden" id="review-rating" value="0">
+          <label class="sr-only" for="review-comment">Tell us about your experience</label>
+          <textarea id="review-comment" rows="5" placeholder="Tell us about your experience..."></textarea>
+          <button class="button button-primary" type="submit">Submit Review</button>
+          <p class="form-status" id="review-status" aria-live="polite"></p>
+        </form>
+
+        <div class="history-panel">
+          <h3>Review History</h3>
+          <div id="customer-review-history" class="history-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="suggestions-section" aria-labelledby="suggestions-title">
+      <div class="section-header compact-header">
+        <div>
+          <p class="eyebrow eyebrow-blue"><span></span> HELP US IMPROVE</p>
+          <h2 id="suggestions-title">Send Us a <em>Suggestion</em></h2>
+        </div>
+      </div>
+
+      <div class="suggestion-layout">
+        <form id="customer-suggestion-form" class="customer-form" novalidate>
+          <label for="suggestion-subject">Subject</label>
+          <input id="suggestion-subject" type="text" placeholder="Subject">
+          <label for="suggestion-message">Suggestion</label>
+          <textarea id="suggestion-message" rows="5" placeholder="Tell us what you would like to see or improve..."></textarea>
+          <button class="button button-primary" type="submit">Submit Suggestion</button>
+          <p class="form-status" id="suggestion-status" aria-live="polite"></p>
+        </form>
+
+        <div class="history-panel">
+          <h3>Suggestion History</h3>
+          <div id="customer-suggestion-history" class="history-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="customization-modal" class="modal-backdrop" hidden>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="customization-title">
+      <button class="modal-close" type="button" aria-label="Close customization">×</button>
+      <h3 id="customization-title">Customize Item</h3>
+
+      <div class="customization-section">
+        <h4>Size</h4>
+        <div class="choice-row">
+          <label><input type="radio" name="size" value="Small" checked> Small</label>
+          <label><input type="radio" name="size" value="Medium"> Medium</label>
+          <label><input type="radio" name="size" value="Large"> Large</label>
+        </div>
+      </div>
+
+      <div class="customization-section">
+        <h4>Milk</h4>
+        <div class="choice-row">
+          <label><input type="radio" name="milk" value="Regular Milk" checked> Regular Milk</label>
+          <label><input type="radio" name="milk" value="Oat Milk"> Oat Milk</label>
+          <label><input type="radio" name="milk" value="Soy Milk"> Soy Milk</label>
+        </div>
+      </div>
+
+      <div class="customization-section">
+        <h4>Sweetness</h4>
+        <div class="choice-row">
+          <label><input type="radio" name="sweetness" value="0%" checked> 0%</label>
+          <label><input type="radio" name="sweetness" value="25%"> 25%</label>
+          <label><input type="radio" name="sweetness" value="50%"> 50%</label>
+          <label><input type="radio" name="sweetness" value="75%"> 75%</label>
+          <label><input type="radio" name="sweetness" value="100%"> 100%</label>
+        </div>
+      </div>
+
+      <div class="customization-section">
+        <h4>Ice</h4>
+        <div class="choice-row">
+          <label><input type="radio" name="ice" value="No Ice" checked> No Ice</label>
+          <label><input type="radio" name="ice" value="Less Ice"> Less Ice</label>
+          <label><input type="radio" name="ice" value="Regular Ice"> Regular Ice</label>
+          <label><input type="radio" name="ice" value="Extra Ice"> Extra Ice</label>
+        </div>
+      </div>
+
+      <div class="customization-section">
+        <h4>Add-ons</h4>
+        <div class="choice-row stacked">
+          <label><input type="checkbox" name="addon" data-price="30" value="Extra Shot"> Extra Shot +₱30</label>
+          <label><input type="checkbox" name="addon" data-price="20" value="Caramel"> Caramel +₱20</label>
+          <label><input type="checkbox" name="addon" data-price="20" value="Vanilla"> Vanilla +₱20</label>
+          <label><input type="checkbox" name="addon" data-price="20" value="Whipped Cream"> Whipped Cream +₱20</label>
+        </div>
+      </div>
+
+      <div class="customization-section quantity-section">
+        <h4>Quantity</h4>
+        <div class="qty-control">
+          <button type="button" class="qty-button" data-qty-action="decrease" aria-label="Decrease quantity">−</button>
+          <span id="customization-quantity">1</span>
+          <button type="button" class="qty-button" data-qty-action="increase" aria-label="Increase quantity">+</button>
+        </div>
+      </div>
+
+      <label class="special-request-label" for="customization-request">Special Request</label>
+      <textarea id="customization-request" rows="3" placeholder="Please write any special instructions..."></textarea>
+
+      <div class="modal-total-row">
+        <span>Total</span>
+        <strong id="customization-total">₱0</strong>
+      </div>
+
+      <button id="add-to-order-button" class="button button-primary button-wide" type="button">Add to Order</button>
+    </div>
+  </div>
+</body>
+</html>

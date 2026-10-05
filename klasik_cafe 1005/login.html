@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="Login to your KLASIK CAFE account.">
+  <title>Login | KLASIK CAFE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js" defer></script>
+  <script src="js/script.js" defer></script>
+</head>
+<body class="auth-page">
+  <main class="auth-layout">
+    <a class="auth-back" href="index.html"><span aria-hidden="true">←</span> Back to home</a>
+    <section class="auth-visual login-visual" aria-label="A calm cafe setting">
+      <img src="images/cafe.jpg" data-fallback="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=85" alt="A warm and welcoming café interior">
+      <div class="auth-visual-shade"></div>
+      <a class="brand brand-light" href="index.html"><img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo"></a>
+      <div class="auth-visual-caption"><p>TAKE A MOMENT FOR YOURSELF</p><h2>Good things<br>start here.</h2></div>
+      <span class="media-placeholder auth-placeholder" hidden>KLASIK CAFE</span>
+    </section>
+    <section class="auth-content">
+      <div class="auth-card">
+        <a class="brand auth-brand" href="index.html"><img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo"></a>
+        <p class="eyebrow eyebrow-blue"><span></span> GOOD TO HAVE YOU BACK</p>
+        <h1>Welcome <em>back!</em></h1>
+        <p class="auth-subtitle">Login to your KLASIK CAFE account.</p>
+        <form id="login-form" class="auth-form" novalidate>
+          <div class="form-field"><label for="login-identity">Email or username</label><input id="login-identity" name="identity" type="text" autocomplete="username" placeholder="you@example.com" aria-describedby="login-message"></div>
+          <div class="form-field"><label for="login-password">Password</label><div class="password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-describedby="login-message"><button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Show password" aria-pressed="false"><span aria-hidden="true">◉</span></button></div></div>
+          <div class="form-options"><label class="check-label"><input type="checkbox" name="remember"><span class="custom-check"></span>Remember me</label><a class="form-link" href="#" data-demo-message="Password reset is not available in this demo.">Forgot password?</a></div>
+          <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
+          <button class="button button-primary button-wide" type="submit">Login <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="demo-role-links" aria-label="Demo role access">
+          <a class="button button-outline button-small" href="index.html">Customer</a>
+          <a class="button button-outline button-small" href="admin.html">Admin</a>
+          <a class="button button-outline button-small" href="barista.html">Barista</a>
+        </div>
+        <p class="auth-switch">Don't have an account? <a href="signup.html">Sign up</a></p>
+        <p class="auth-home-link"><a href="index.html">Explore KLASIK CAFE <span aria-hidden="true">↗</span></a></p>
+      </div>
+      <p class="auth-footnote">KLASIK CAFE</p>
+    </section>
+  </main>
+</body>
+</html>

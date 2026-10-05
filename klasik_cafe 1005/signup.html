@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="Create your KLASIK CAFE account.">
+  <title>Sign Up | KLASIK CAFE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js" defer></script>
+  <script src="js/script.js" defer></script>
+</head>
+<body class="auth-page">
+  <main class="auth-layout auth-layout-signup">
+    <a class="auth-back" href="index.html"><span aria-hidden="true">←</span> Back to home</a>
+    <section class="auth-visual signup-visual" aria-label="Coffee prepared fresh at KLASIK CAFE">
+      <img src="images/coffee.jpg" data-fallback="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=85" alt="Coffee beans and a freshly prepared cup of coffee">
+      <div class="auth-visual-shade"></div>
+      <a class="brand brand-light" href="index.html"><img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo"></a>
+      <div class="auth-visual-caption"><p>YOUR NEIGHBORHOOD COFFEE STOP</p><h2>Make room<br>for good days.</h2></div>
+      <span class="media-placeholder auth-placeholder" hidden>KLASIK CAFE</span>
+    </section>
+    <section class="auth-content auth-content-signup">
+      <div class="auth-card auth-card-signup">
+        <a class="brand auth-brand" href="index.html"><img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo"></a>
+        <p class="eyebrow eyebrow-blue"><span></span> PULL UP A CHAIR</p>
+        <h1>Create your <em>account</em></h1>
+        <p class="auth-subtitle">Join KLASIK CAFE today.</p>
+        <form id="signup-form" class="auth-form signup-form" novalidate>
+          <div class="form-grid">
+            <div class="form-field"><label for="first-name">First name</label><input id="first-name" name="firstName" type="text" autocomplete="given-name" placeholder="First name" aria-describedby="signup-message"></div>
+            <div class="form-field"><label for="last-name">Last name</label><input id="last-name" name="lastName" type="text" autocomplete="family-name" placeholder="Last name" aria-describedby="signup-message"></div>
+            <div class="form-field form-field-full"><label for="signup-email">Email</label><input id="signup-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="signup-message"></div>
+            <div class="form-field"><label for="signup-username">Username</label><input id="signup-username" name="username" type="text" autocomplete="username" placeholder="Choose a username" aria-describedby="signup-message"></div>
+            <div class="form-field"><label for="phone">Phone number</label><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX" aria-describedby="signup-message"></div>
+            <div class="form-field form-field-full"><label for="signup-password">Password</label><div class="password-wrap"><input id="signup-password" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" aria-describedby="signup-message"><button class="password-toggle" type="button" data-password-toggle="signup-password" aria-label="Show password" aria-pressed="false"><span aria-hidden="true">◉</span></button></div></div>
+            <div class="form-field form-field-full"><label for="confirm-password">Confirm password</label><div class="password-wrap"><input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Enter your password again" aria-describedby="signup-message"><button class="password-toggle" type="button" data-password-toggle="confirm-password" aria-label="Show password" aria-pressed="false"><span aria-hidden="true">◉</span></button></div></div>
+          </div>
+          <label class="check-label terms-label"><input type="checkbox" name="terms"><span class="custom-check"></span><span>I agree to the <a class="form-link" href="#terms" data-demo-message="Terms and conditions will be added in a later project phase.">Terms and Conditions</a></span></label>
+          <p class="form-message" id="signup-message" role="status" aria-live="polite"></p>
+          <div class="success-panel" id="signup-success" hidden><strong>Account created successfully!</strong><span>Your demo account is ready. Continue to login.</span><a class="button button-outline button-small" href="login.html">Go to login <span aria-hidden="true">→</span></a></div>
+          <button class="button button-primary button-wide" type="submit">Create account <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="login.html">Login</a></p>
+        <p class="auth-home-link"><a href="index.html">Explore KLASIK CAFE <span aria-hidden="true">↗</span></a></p>
+      </div>
+      <p class="auth-footnote">KLASIK CAFE</p>
+    </section>
+  </main>
+</body>
+</html>
