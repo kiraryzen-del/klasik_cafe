@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/customer.css">
-  <script src="js/script.js" defer></script>
-  <script src="js/customer.js" defer></script>
+  <script type="module" src="js/script.js"></script>
+  <script type="module" src="js/customer.js"></script>
 </head>
 <body class="customer-body">
   <header class="customer-header">
@@ -71,6 +71,8 @@
         <button class="category-button" type="button" data-menu-category="add-ons">Add-ons</button>
       </div>
       <div id="customer-menu-grid" class="customer-menu-grid"></div>
+      <p id="customer-cart-status" class="form-status" aria-live="polite"></p>
+      <a class="button button-outline button-small" href="orders.html">Review cart and checkout</a>
     </section>
 
     <section class="orders-layout">

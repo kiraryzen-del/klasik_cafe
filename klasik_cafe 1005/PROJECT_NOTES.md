@@ -5,53 +5,42 @@
 - **Type:** Small café website
 - **Brand:** KLASIK CAFE
 - **Primary color:** Logo blue (`#1E3382`); pale blue tints remain for backgrounds and borders
-- **Technology:** Plain HTML, CSS, and vanilla JavaScript; no framework or backend
+- **Technology:** Semantic HTML, CSS, and vanilla JavaScript with Vite as a bundler and optional `@supabase/supabase-js` integration; no UI framework
 
 ## Current Scope
-The first version contains three connected pages:
-- `index.html`: café homepage, featured menu, coffee and story sections, location, social links, and footer
-- `login.html`: demo login form with client-side validation and password visibility toggle
-- `signup.html`: demo registration form with client-side validation, terms checkbox, password visibility toggles, and a login link after success
-
-Authentication is demonstration-only. There is no database, API, ordering, payment, cart, dashboard, or account persistence.
+The project retains its existing homepage, login, sign-up, menu, customer, admin, barista, cart/order-review, and order-history pages. Supabase is optional and is activated only when the public project URL and publishable key are configured; without credentials, the original browser-based demo flows remain available.
 
 ## Structure
 - `klasik_cafe_logo_3_-removebg-preview.png`: shared brand logo used in the homepage header/footer and both account pages
 - `css/style.css`: shared responsive design and page styles
-- `js/script.js`: mobile navigation, image fallbacks, password toggles, demo links, and form validation
+- `js/script.js`: mobile navigation, image fallbacks, password toggles, login/sign-up flows, and form validation
+- `js/supabase-client.js`, `js/supabase-auth.js`, `js/supabase-data.js`: optional Supabase client, auth, and database operations
+- `supabase/migrations/`: additive schema/RLS/RPC migration and source-derived existing catalog seed
+- `supabase/README.md`: Supabase project, SQL Editor, environment, and staff-role setup
 - `images/`: local image paths are used when assets are added; remote café photography is the current fallback. If both sources fail, a styled placeholder is shown.
 
 ## Current Behavior and Decisions
 - Homepage navigation links scroll to sections; account links open the separate login and sign-up pages.
-- The existing homepage remains the customer homepage and now includes an in-page customer order cart, drink customization modal, order history, reviews, and suggestions without replacing the original café design.
+- The existing homepage and menu remain intact; the same cart, customization, order history, review, and suggestion features can use Supabase when configured without replacing the original café design.
 - The homepage menu area presents three featured products. The complete category-filtered menu is on `menu.html`, which loads the shared product catalog from `index.html` and retains drink customization and cart behavior.
 - Product categories now support a nested structure so a main category such as Coffee can contain subcategories like Iced Coffee, Hot Coffee, and Espesyal for clearer organization in the admin panel and menu filtering.
 - Order review and order history now live on separate pages: `orders.html` handles the active cart and place-order flow, while `order-history.html` shows previous orders.
 - Each page includes a dedicated switch button so users can move between Order Review and Order History without mixing the two views.
 - Product-card “View menu” labels are display-only for now; item-specific interactions can be added later.
-- Signup requires all fields, a valid email and phone number, a password of at least eight characters, matching confirmation, and accepted terms.
-- Login accepts a username or email, validates email formatting when the value contains `@`, and redirects the demo customer back to the homepage after successful login.
-- Demo forms show success feedback only; they do not create or authenticate real accounts.
+- Signup requires all fields, a valid email and phone number, a password of at least eight characters, matching confirmation, and accepted terms. In configured Supabase mode, Auth creates the user and a database trigger creates a customer profile.
+- Login retains demo behavior without credentials and uses Supabase Auth by email when configured.
 - The café location is listed by Google Maps as beside Chapel, Matimbubong, San Ildefonso, Bulacan. The directions link and embedded map use the supplied Google Maps location. Opening hours, contact number, social accounts, and menu details are sample content and should be confirmed before real use.
 - Google Fonts, Unsplash image fallbacks, and the Google Maps embed require an internet connection; local images can replace the image fallbacks.
 
 ## Validation Performed
+- `npm.cmd run build` passed after the Supabase integration; Vite emitted all nine existing HTML pages.
+- `node --check` passed for every `js/*.js` file, and editor diagnostics found no issues in the changed integration scripts.
+- Browser smoke test loaded all nine pages with HTTP 200 and no page-level JavaScript exceptions in no-credentials/demo mode.
+- Supabase browser smoke test with no authenticated user confirmed a null signed-in user, preserved cart count, and no console errors on order review.
+- Compared the migration seed to the source homepage in-browser: all 72 product cards matched names, descriptions, displayed prices, and image references; all 15 category labels matched after correcting the Smores Series label.
+- Dependency installation completed with `npm.cmd install`; the reported npm audit had zero vulnerabilities.
 - `node --check js/script.js` completed without syntax errors.
 - `node --check js/customer.js; node --check js/admin.js; node --check js/barista.js` completed without syntax errors after the dashboard additions.
-- `node --check js/supabase.js` passed after Supabase authentication helper changes.
-
-## Backend Setup Notes
-- Added reusable Supabase connection scaffolding in `js/supabase.js`.
-- Added SQL schema and seed files under `supabase/` for profiles, products, orders, reviews, suggestions, and café info.
-- Auth flows in `js/script.js` now use the Supabase helper when configured while preserving the current demo fallback behavior when keys are unset.
-- The Supabase project URL and public anon key have been entered in `js/supabase.js`; values are intentionally not copied into this notes file. The owner confirmed the schema and seed SQL ran successfully in Supabase.
-- The schema hardens role assignment: new profiles are always `customer`, role changes are not available through the customer's profile update grant, and admin checks use a definer helper to avoid profile-policy recursion.
-- Profile creation is handled by the database auth trigger; the browser no longer attempts an RLS-blocked profile upsert after signup.
-- Supabase-backed customer/admin/barista data operations and server-side order total validation are not yet wired; existing dashboard persistence is still demo/local behavior.
-- Seed data now skips café-info insertion when a café row already exists, avoiding an `ON CONFLICT(name)` error because the schema does not make that field unique.
-- Menu focus: the homepage featured menu and full `menu.html` catalog load available products from Supabase when configured, share a reusable card renderer, retain the existing static fallback when Supabase is not configured, and use the database best-seller flags and available customization add-on prices.
-- Public product and add-on read policies restrict non-admin access to available items only; rerun `supabase/schema.sql` to apply this policy update to the already-created database. Menu JavaScript syntax checks passed.
-- Product ordering and other customer, admin, and barista data flows remain for later phases.
 - Browser checks covered homepage rendering and its six menu cards, mobile navigation interaction, login and sign-up validation/success states, password visibility, and the post-sign-up login link.
 - The homepage showed no horizontal overflow at the tested desktop viewport. Remote photo fallbacks loaded when the local image files were absent.
 - The supplied `klasik_cafe_logo_3_-removebg-preview.png` is used in the brand locations across all three pages.
@@ -77,18 +66,28 @@ Authentication is demonstration-only. There is no database, API, ordering, payme
 - Added Snacks and Pasta as main menu categories without subcategories. Snacks contains French Fries and Double Cheese Sausage; Pasta contains one sample item, Creamy Chicken Pasta.
 - Browser verification confirmed the Snacks filter shows exactly French Fries and Double Cheese Sausage, with no horizontal overflow; homepage HTML diagnostics found no errors.
 
-## New interface work – customer, admin, and barista dashboards
-- Added mock customer dashboard pages and supporting data for menu browsing, drink customization, order tracking, customer reviews, and suggestions.
-- Added separate mock admin dashboard with product management, review moderation, suggestion status management, and café information editing.
-- Added separate mock barista dashboard to accept orders, advance status through the preparation flow, and preview receipt details for completed orders.
-- The demo role links are available from the login page so visitors can move between customer, admin, and barista views without a backend or authentication system.
-- LocalStorage is used to keep the temporary interface data in the browser while the static project remains backend-free.
+## Existing customer, admin, and barista dashboards
+- The existing customer dashboard supports menu browsing, customization, order tracking, reviews, and suggestions.
+- The existing admin dashboard supports product management, review moderation, suggestion status, and café information.
+- The existing barista dashboard supports order queues, status progression, and receipt previews.
+- Without Supabase credentials, the pages retain their existing demo roles and LocalStorage behavior. With credentials, access is controlled by Supabase Auth roles and database policies.
+- Supabase mode uses a separate cart key and does not automatically clear or overwrite legacy keys. Legacy menu import is opt-in; anonymous demo order/review/suggestion records are not automatically assigned to an account.
+
+## Supabase integration status
+- Added nine PostgreSQL tables, RLS policies, profile creation, server-priced checkout, and staff-only order-status RPCs in `supabase/migrations/001_initial_schema.sql`.
+- `supabase/migrations/002_seed_existing_menu.sql` contains the 72 existing homepage product cards, existing category hierarchy, four customization add-ons, and current homepage cafe details. Stable source keys, matching against existing names/categories, and conflict-do-nothing behavior avoid duplicate imports and preserve existing catalog rows.
+- Customer Auth/profile, remote catalog/customization, checkout/order history, reviews/suggestions, cafe display, admin data management, and barista order-status paths use Supabase when configured.
+- Signed-out Supabase pages now distinguish an absent session from an Auth error. Order/cart pages no longer emit "Auth session missing" during normal signed-out loads; checkout retains the cart and directs the customer to login.
+- The multi-page Vite build includes all nine existing HTML pages. No pages or existing product data were removed.
+- Supabase itself has **not** been provisioned/configured, and neither migration has been executed against a live account. See `supabase/README.md` for manual setup, `.env` values, and SQL Editor instructions.
+- Demo-mode LocalStorage order/review/suggestion data is preserved, not automatically migrated, because account ownership cannot be established safely.
 
 ## Next Steps / Known Limitations
-- Confirm the sample phone number, opening hours, social links, and placeholder menu details before real use.
-- Add actual photos under `images/` using the filenames referenced by the page markup.
-- Keep any future system features out of this first phase unless the project scope is explicitly expanded.
-- There are no automated tests or backend services in this static project.
+- Create the Supabase project, run the migrations in order, configure `.env`, enable Email Auth, and manually promote trusted staff accounts as described in `supabase/README.md`.
+- Confirm the cafe phone, hours, social links, and placeholder menu details before publishing; the database seed intentionally follows existing page content.
+- Local demo order/review/suggestion data needs owner verification before any manual migration. Existing cart data remains under its original key and is not silently imported into Supabase.
+- No live Supabase account was available for database/runtime integration testing; validate signup, staff promotion, checkout, and order status after setup.
+- Add real photos under `images/` when ready; existing references are preserved.
 
 ## Session Maintenance
 When project files, behavior, scope, or decisions change, update these notes during that work session so the next chat starts with accurate context. Record meaningful decisions, current behavior, validation performed, and remaining work; remove details that are no longer true.
