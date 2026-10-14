@@ -10,6 +10,7 @@ import {
   fetchMenuCatalog,
   fetchReviews,
   fetchSuggestions,
+  subscribeToReviews,
   submitCustomerOrder
 } from "./supabase-data.js";
 
@@ -28,6 +29,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reviewMessage = document.getElementById("customer-review-message");
   const submitReviewButton = document.getElementById("customer-submit-review");
   const reviewList = document.getElementById("customer-review-list");
+  const reviewHistory = document.getElementById("customer-review-history");
+  const reviewRealtimeStatus = document.getElementById("customer-review-realtime-status");
   const suggestionSubject = document.getElementById("customer-suggestion-subject");
   const suggestionInput = document.getElementById("customer-suggestion-message");
   const submitSuggestionButton = document.getElementById("customer-submit-suggestion");
@@ -907,15 +910,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         remoteOrders = [];
       }
     }
-    if (reviewList || document.getElementById("customer-review-history")) {
+    if (reviewList || reviewHistory) {
       try {
         remoteReviews = await fetchReviews({
-          includeModeration: Boolean(document.getElementById("customer-review-history"))
+          includeModeration: Boolean(reviewHistory)
         });
       } catch (error) {
         remoteReviews = [];
         remoteLoadErrors.set("reviews", `Supabase reviews could not be loaded: ${error.message || "Unknown error."}`);
-        announceError(reviewList || document.getElementById("customer-review-history"), "Supabase reviews could not be loaded.", error);
+        announceError(reviewList || reviewHistory, "Supabase reviews could not be loaded.", error);
       }
     }
     if (suggestionHistory) {
@@ -978,4 +981,39 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderOrdersHistory();
   renderReviewsList();
   renderSuggestionsList();
+
+  if (supabaseConfigured && (reviewList || reviewHistory)) {
+    let reviewChannelCleanup;
+    const setRealtimeStatus = (message, isError = false) => {
+      if (!reviewRealtimeStatus) return;
+      reviewRealtimeStatus.textContent = message;
+      reviewRealtimeStatus.classList.toggle("is-error", isError);
+    };
+
+    try {
+      setRealtimeStatus("Connecting to live review updates...");
+      reviewChannelCleanup = subscribeToReviews(async () => {
+        remoteReviews = await fetchReviews({ includeModeration: Boolean(reviewHistory) });
+        renderReviewsList();
+        renderDashboardReviews();
+      }, (status, error) => {
+        if (error) console.error(`Supabase review realtime ${status}:`, error);
+        if (status === "SUBSCRIBED") {
+          setRealtimeStatus("Live review updates connected.");
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CALLBACK_ERROR") {
+          setRealtimeStatus("Live review updates are unavailable. Check Supabase Realtime and the review query.", true);
+        } else if (status === "CLOSED") {
+          setRealtimeStatus("Live review updates disconnected.");
+        }
+      });
+      window.addEventListener("pagehide", () => {
+        if (!reviewChannelCleanup) return;
+        reviewChannelCleanup().catch((error) => console.error("Unable to close the review realtime channel:", error));
+        reviewChannelCleanup = null;
+      }, { once: true });
+    } catch (error) {
+      console.error("Unable to subscribe to Supabase review updates:", error);
+      setRealtimeStatus("Live review updates could not be started.", true);
+    }
+  }
 });

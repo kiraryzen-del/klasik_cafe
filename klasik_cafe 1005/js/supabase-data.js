@@ -193,6 +193,22 @@ export async function fetchReviews({ includeModeration = false } = {}) {
   return throwIfError(await query);
 }
 
+export function subscribeToReviews(onChange, onStatus = () => {}) {
+  const client = requireSupabase();
+  const channel = client
+    .channel(`reviews-live-${Date.now()}`)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "reviews"
+    }, (payload) => {
+      Promise.resolve(onChange(payload)).catch((error) => onStatus("CALLBACK_ERROR", error));
+    })
+    .subscribe((status, error) => onStatus(status, error));
+
+  return () => client.removeChannel(channel);
+}
+
 export async function createReview(customerId, rating, comment) {
   const client = requireSupabase();
   return throwIfError(await client

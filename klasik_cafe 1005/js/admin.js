@@ -16,6 +16,7 @@ import {
   saveMenuAddon,
   saveMenuCategory,
   saveMenuItem,
+  subscribeToReviews,
   setMenuItemAvailability,
   setOrderStatus,
   updateSuggestion
@@ -70,7 +71,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   let addons = [];
 
   const productTableBody = document.getElementById("admin-product-table-body");
+  const productSearchInput = document.getElementById("admin-product-search-input");
+  const productSearchStatus = document.getElementById("admin-product-search-status");
+  const productSearchSuggestions = document.getElementById("admin-product-search-suggestions");
   const reviewList = document.getElementById("admin-review-list");
+  const reviewRealtimeStatus = document.getElementById("admin-review-realtime-status");
   const suggestionList = document.getElementById("admin-suggestion-list");
   const productModal = document.getElementById("product-modal");
   const productForm = document.getElementById("product-form");
@@ -78,6 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const cancelProductModal = document.getElementById("cancel-product-modal");
   const cafeForm = document.getElementById("cafe-info-form");
   const orderList = document.getElementById("admin-order-list");
+  let productSearchQuery = "";
   const categoryForm = document.getElementById("menu-category-form");
   const addonForm = document.getElementById("menu-addon-form");
   const supabaseMenuTools = document.getElementById("supabase-menu-tools");
@@ -85,6 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const staffAccountsNav = document.getElementById("staff-accounts-nav");
   const staffInviteForm = document.getElementById("staff-invite-form");
   const staffInviteMessage = document.getElementById("staff-invite-message");
+  let reviewChannelCleanup = null;
 
   function loadData(key, fallback) {
     try {
@@ -240,12 +247,86 @@ document.addEventListener("DOMContentLoaded", async () => {
         </tr>
       `;
     }).join("");
+    updateProductSearch();
   }
+
+  function updateProductSearch() {
+    if (!productTableBody) return;
+
+    const rows = Array.from(productTableBody.querySelectorAll("tr:not([data-no-product-matches])"));
+    let matchingRows = 0;
+    rows.forEach((row) => {
+      const matches = !productSearchQuery || row.textContent.toLocaleLowerCase().includes(productSearchQuery);
+      row.hidden = !matches;
+      if (matches) matchingRows += 1;
+    });
+
+    let emptyRow = productTableBody.querySelector("[data-no-product-matches]");
+    if (productSearchQuery && !matchingRows) {
+      if (!emptyRow) {
+        emptyRow = document.createElement("tr");
+        emptyRow.dataset.noProductMatches = "true";
+        emptyRow.innerHTML = "<td colspan='5'>No matching products.</td>";
+        productTableBody.append(emptyRow);
+      }
+    } else {
+      emptyRow?.remove();
+    }
+
+    if (!productSearchSuggestions || !productSearchStatus) return;
+    productSearchSuggestions.replaceChildren();
+    if (!productSearchQuery || matchingRows) {
+      productSearchStatus.textContent = "";
+      return;
+    }
+
+    const editDistance = (left, right) => {
+      const row = Array.from({ length: right.length + 1 }, (_, index) => index);
+      for (let i = 1; i <= left.length; i += 1) {
+        let diagonal = row[0];
+        row[0] = i;
+        for (let j = 1; j <= right.length; j += 1) {
+          const above = row[j];
+          row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diagonal + (left[i - 1] === right[j - 1] ? 0 : 1));
+          diagonal = above;
+        }
+      }
+      return row[right.length];
+    };
+    const suggestions = products.map((product) => {
+      const words = product.name.toLocaleLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      return {
+        name: product.name,
+        distance: Math.min(...words.map((word) => editDistance(productSearchQuery, word)))
+      };
+    }).filter((item) => item.distance <= Math.max(2, Math.floor(productSearchQuery.length * 0.4)))
+      .sort((left, right) => left.distance - right.distance || left.name.localeCompare(right.name))
+      .slice(0, 4);
+
+    productSearchStatus.textContent = `No results for "${productSearchInput.value.trim()}".${suggestions.length ? " Did you mean:" : " Try a different search."}`;
+    suggestions.forEach((item) => {
+      const suggestion = document.createElement("button");
+      suggestion.type = "button";
+      suggestion.className = "admin-product-search-suggestion";
+      suggestion.textContent = item.name;
+      suggestion.addEventListener("click", () => {
+        productSearchInput.value = item.name;
+        productSearchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        productSearchInput.focus();
+      });
+      productSearchSuggestions.append(suggestion);
+    });
+  }
+
+  productSearchInput?.addEventListener("input", () => {
+    productSearchQuery = productSearchInput.value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+    updateProductSearch();
+  });
 
   function renderReviews() {
     if (!reviewList) return;
 
-    reviewList.innerHTML = adminReviews.map((review) => `
+    reviewList.innerHTML = adminReviews.length ? adminReviews.map((review) => `
       <div class="admin-review-item">
         <strong>${escapeHtml(review.customer || "Customer")}</strong>
         <span class="review-rating">${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}</span>
@@ -258,7 +339,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         </select>` : ""}
         <button type="button" class="inline-button delete-review" data-review-id="${escapeHtml(review.id)}">Delete</button>
       </div>
-    `).join("");
+    `).join("") : '<p class="customer-empty-state">No reviews have been submitted yet.</p>';
+  }
+
+  function replaceAdminReviews(rows) {
+    adminReviews.splice(0, adminReviews.length, ...rows.map((item) => ({
+      ...item,
+      customer: "Customer",
+      date: new Date(item.created_at).toLocaleDateString()
+    })));
+    renderReviews();
+  }
+
+  function setReviewRealtimeStatus(message, isError = false) {
+    if (!reviewRealtimeStatus) return;
+    reviewRealtimeStatus.textContent = message;
+    reviewRealtimeStatus.classList.toggle("is-error", isError);
   }
 
   function renderSuggestions() {
@@ -734,11 +830,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         image: item.image_path,
         available: item.is_available
       })));
-      adminReviews.splice(0, adminReviews.length, ...remoteReviews.map((item) => ({
-        ...item,
-        customer: "Customer",
-        date: new Date(item.created_at).toLocaleDateString()
-      })));
+      replaceAdminReviews(remoteReviews);
       suggestions.splice(0, suggestions.length, ...remoteSuggestions.map((item) => ({
         ...item,
         customer: "Customer",
@@ -774,4 +866,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderReviews();
   renderSuggestions();
   populateCafeInfo();
+
+  if (supabaseConfigured && reviewList) {
+    try {
+      setReviewRealtimeStatus("Connecting to live review updates...");
+      reviewChannelCleanup = subscribeToReviews(async () => {
+        const reviews = await fetchReviews({ includeModeration: true });
+        replaceAdminReviews(reviews);
+      }, (status, error) => {
+        if (error) console.error(`Supabase review realtime ${status}:`, error);
+        if (status === "SUBSCRIBED") {
+          setReviewRealtimeStatus("Live review updates connected.");
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CALLBACK_ERROR") {
+          setReviewRealtimeStatus("Live review updates are unavailable. Check Supabase Realtime and the review query.", true);
+        } else if (status === "CLOSED") {
+          setReviewRealtimeStatus("Live review updates disconnected.");
+        }
+      });
+      window.addEventListener("pagehide", () => {
+        if (!reviewChannelCleanup) return;
+        reviewChannelCleanup().catch((error) => console.error("Unable to close the review realtime channel:", error));
+        reviewChannelCleanup = null;
+      }, { once: true });
+    } catch (error) {
+      console.error("Unable to subscribe to Supabase review updates:", error);
+      setReviewRealtimeStatus("Live review updates could not be started.", true);
+    }
+  }
 });

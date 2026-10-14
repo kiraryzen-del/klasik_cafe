@@ -13,8 +13,15 @@
   <link rel="stylesheet" href="css/customer.css">
   <script type="module" src="js/script.js"></script>
   <script type="module" src="js/customer.js"></script>
+  <script type="module" src="js/favorites-ui.js"></script>
 </head>
 <body>
+  <section class="intro-screen" aria-label="Welcome to Klasik Cafe">
+    <div class="intro-content">
+      <img class="intro-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo">
+      <p class="intro-tagline"><span>A</span><span>taste</span><span>of</span><span>Klasik</span><span>in</span><span>every</span><span>cup.</span></p>
+    </div>
+  </section>
   <header class="site-header">
     <div class="nav-wrap">
       <a class="brand" href="index.html" aria-label="KLASIK CAFE home">
@@ -822,6 +829,7 @@
           <button class="button button-primary button-wide" id="customer-submit-review" type="button">Submit Review</button>
           <p id="customer-review-message" class="customer-message" aria-live="polite"></p>
           <div id="customer-review-list" class="customer-review-list"></div>
+          <p id="customer-review-realtime-status" class="customer-message" role="status" aria-live="polite"></p>
         </div>
 
         <div class="customer-panel">
@@ -938,6 +946,8 @@
         <h2>Your account</h2>
         <a href="login.html">Login</a>
         <a href="signup.html">Create an account</a>
+        <a href="favorites.html">Favorites</a>
+        <a href="feedback.html">Reviews &amp; Suggestions</a>
       </div>
     </div>
     <div class="page-width footer-bottom"><span>© 2026 KLASIK CAFE. All Rights Reserved.</span></div>

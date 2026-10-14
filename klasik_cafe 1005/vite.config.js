@@ -10,6 +10,8 @@ const pages = [
   "menu.html",
   "orders.html",
   "order-history.html",
+  "favorites.html",
+  "feedback.html",
   "customer.html",
   "admin.html",
   "barista.html"

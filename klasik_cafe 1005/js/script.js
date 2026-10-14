@@ -10,6 +10,16 @@ import {
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
+  const introScreen = document.querySelector(".intro-screen");
+  if (introScreen) {
+    const introScreenDuration = 3000;
+    const fadeDuration = 450;
+    window.setTimeout(() => {
+      introScreen.classList.add("is-hidden");
+      window.setTimeout(() => introScreen.remove(), fadeDuration);
+    }, introScreenDuration - fadeDuration);
+  }
+
   const menuToggle = document.querySelector(".menu-toggle");
   const primaryNav = document.querySelector(".primary-nav");
 

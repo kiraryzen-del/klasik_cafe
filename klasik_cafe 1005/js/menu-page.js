@@ -28,6 +28,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (intro) intro.textContent = "A few café favorites, made fresh. Choose a category to explore more.";
     menu.querySelector(".featured-menu-action")?.remove();
 
+    const search = document.createElement("div");
+    search.className = "menu-search";
+    search.innerHTML = `
+      <label for="menu-search-input">Search the menu</label>
+      <div class="menu-search-field">
+        <svg class="menu-search-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="10.8" cy="10.8" r="6.8"></circle>
+          <path d="m16 16 4.5 4.5"></path>
+        </svg>
+        <input id="menu-search-input" type="search" placeholder="Search drinks, pastries, and more..." autocomplete="off">
+      </div>
+      <p class="menu-search-status" id="menu-search-status" aria-live="polite"></p>
+      <div class="menu-search-suggestions" id="menu-search-suggestions" aria-label="Suggested menu searches"></div>
+    `;
+    menu.querySelector(".category-groups")?.before(search);
+
     const categoryGroups = menu.querySelector(".category-groups");
     if (categoryGroups) {
       const bestSellersGroup = document.createElement("div");
@@ -71,6 +87,80 @@ document.addEventListener("DOMContentLoaded", async () => {
         menu.prepend(warning);
       }
     }
+
+    const searchInput = menu.querySelector("#menu-search-input");
+    const searchStatus = menu.querySelector("#menu-search-status");
+    const suggestions = menu.querySelector("#menu-search-suggestions");
+    const cards = Array.from(menu.querySelectorAll(".product-card"));
+    const categoryVisibility = new Map(cards.map((card) => [card, !card.hidden]));
+    const normalize = (value) => value.toLocaleLowerCase().trim().replace(/\s+/g, " ");
+    const editDistance = (left, right) => {
+      const row = Array.from({ length: right.length + 1 }, (_, index) => index);
+      for (let i = 1; i <= left.length; i += 1) {
+        let diagonal = row[0];
+        row[0] = i;
+        for (let j = 1; j <= right.length; j += 1) {
+          const above = row[j];
+          row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diagonal + (left[i - 1] === right[j - 1] ? 0 : 1));
+          diagonal = above;
+        }
+      }
+      return row[right.length];
+    };
+
+    const applyMenuSearch = () => {
+      const query = normalize(searchInput.value);
+      const matchingCards = [];
+      cards.forEach((card) => {
+        const searchableText = normalize([
+          card.querySelector(".product-title h3")?.textContent || "",
+          card.querySelector(".product-category")?.textContent || "",
+          card.querySelector(".product-info p")?.textContent || ""
+        ].join(" "));
+        const matches = query ? searchableText.includes(query) : categoryVisibility.get(card);
+        card.hidden = !matches;
+        if (matches && query) matchingCards.push(card);
+      });
+
+      suggestions.replaceChildren();
+      if (!query || matchingCards.length) {
+        searchStatus.textContent = "";
+        return;
+      }
+
+      const candidates = cards.map((card) => {
+        const name = card.querySelector(".product-title h3")?.textContent.trim() || "";
+        const words = normalize(name).split(/[^a-z0-9]+/).filter(Boolean);
+        const distance = Math.min(...words.map((word) => editDistance(query, word)));
+        return { name, distance };
+      }).filter((candidate) => candidate.distance <= Math.max(2, Math.floor(query.length * 0.4)))
+        .sort((left, right) => left.distance - right.distance || left.name.localeCompare(right.name))
+        .filter((candidate, index, list) => list.findIndex((item) => item.name === candidate.name) === index)
+        .slice(0, 4);
+
+      searchStatus.textContent = `No results for "${searchInput.value.trim()}".${candidates.length ? " Did you mean:" : " Try a different search."}`;
+      candidates.forEach((candidate) => {
+        const suggestion = document.createElement("button");
+        suggestion.type = "button";
+        suggestion.className = "menu-search-suggestion";
+        suggestion.textContent = candidate.name;
+        suggestion.addEventListener("click", () => {
+          searchInput.value = candidate.name;
+          applyMenuSearch();
+          searchInput.focus();
+        });
+        suggestions.append(suggestion);
+      });
+    };
+
+    searchInput.addEventListener("input", applyMenuSearch);
+    document.addEventListener("click", (event) => {
+      if (!menu.contains(event.target) || !event.target.closest(".main-category-button, .category-chip")) return;
+      window.setTimeout(() => {
+        cards.forEach((card) => categoryVisibility.set(card, !card.hidden));
+        applyMenuSearch();
+      }, 0);
+    });
   } catch (error) {
     menuContent.innerHTML = '<p class="page-width menu-loading" role="alert">The menu could not be loaded. Please refresh the page to try again.</p>';
   }

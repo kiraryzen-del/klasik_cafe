@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="Share your KLASIK CAFE experience or send us a suggestion.">
+  <title>Reviews &amp; Suggestions | KLASIK CAFE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/customer.css">
+  <script type="module" src="js/script.js"></script>
+  <script type="module" src="js/customer.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-wrap">
+      <a class="brand" href="index.html#home" aria-label="KLASIK CAFE home">
+        <img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo">
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav">
+        <span></span><span></span><span></span>
+      </button>
+      <nav id="primary-nav" class="primary-nav" aria-label="Main navigation">
+        <a class="nav-link" href="index.html#home">Home</a>
+        <a class="nav-link" href="menu.html">Menu</a>
+        <a class="nav-link" href="index.html#story">About Us</a>
+        <a class="nav-link" href="index.html#location">Location</a>
+        <a class="button button-primary button-small" href="feedback.html" aria-current="page">Reviews &amp; Suggestions</a>
+        <div class="nav-actions">
+          <a class="button button-outline button-small cart-trigger" href="orders.html" aria-label="Review your order">
+            <span aria-hidden="true">🛒</span><span>Cart</span><span class="cart-badge" id="cart-count-badge">0</span>
+          </a>
+          <a class="button button-outline button-small" href="login.html">Login</a>
+          <a class="button button-primary button-small" href="signup.html">Sign Up</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="feedback-page page-width">
+    <header class="feedback-page-heading">
+      <p class="eyebrow eyebrow-blue"><span></span> WE'D LOVE TO HEAR FROM YOU</p>
+      <h1>Reviews &amp; <em>Suggestions</em></h1>
+      <p>Tell us about your visit or share an idea to help make KLASIK CAFE even better.</p>
+    </header>
+    <div class="feedback-form-grid">
+      <section class="customer-panel" aria-labelledby="feedback-review-title">
+        <div class="customer-panel-header">
+          <p class="eyebrow eyebrow-blue"><span></span> CUSTOMER REVIEW</p>
+          <h2 id="feedback-review-title">Share your <em>experience</em></h2>
+        </div>
+        <div class="customer-stars" id="customer-star-picker" role="group" aria-label="Select a rating">
+          <button type="button" class="customer-star" data-rating="1" aria-label="1 star" aria-pressed="false">★</button>
+          <button type="button" class="customer-star" data-rating="2" aria-label="2 stars" aria-pressed="false">★</button>
+          <button type="button" class="customer-star" data-rating="3" aria-label="3 stars" aria-pressed="false">★</button>
+          <button type="button" class="customer-star" data-rating="4" aria-label="4 stars" aria-pressed="false">★</button>
+          <button type="button" class="customer-star" data-rating="5" aria-label="5 stars" aria-pressed="false">★</button>
+        </div>
+        <input type="hidden" id="customer-review-rating" value="0">
+        <label class="sr-only" for="customer-review-comment">Tell us about your experience</label>
+        <textarea id="customer-review-comment" rows="5" placeholder="Tell us about your experience..."></textarea>
+        <button class="button button-primary button-wide" id="customer-submit-review" type="button">Submit Review</button>
+        <p id="customer-review-message" class="customer-message" aria-live="polite"></p>
+      </section>
+      <section class="customer-panel" aria-labelledby="feedback-suggestion-title">
+        <div class="customer-panel-header">
+          <p class="eyebrow eyebrow-blue"><span></span> HELP US IMPROVE</p>
+          <h2 id="feedback-suggestion-title">Send a <em>suggestion</em></h2>
+        </div>
+        <label class="customer-field-label" for="customer-suggestion-subject">Subject</label>
+        <input id="customer-suggestion-subject" type="text" placeholder="Subject">
+        <label class="customer-field-label" for="customer-suggestion-message">Suggestion</label>
+        <textarea id="customer-suggestion-message" rows="5" placeholder="Tell us what you would like to see or improve..."></textarea>
+        <button class="button button-primary button-wide" id="customer-submit-suggestion" type="button">Submit Suggestion</button>
+        <p id="customer-suggestion-status" class="customer-message" aria-live="polite"></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="page-width footer-main">
+      <div class="footer-brand-block"><a class="brand brand-footer" href="index.html"><img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo"></a><p>Your classic coffee experience.<br>Made with care in San Ildefonso.</p></div>
+      <div class="footer-column"><h2>Explore</h2><a href="index.html#home">Home</a><a href="menu.html">Our menu</a><a href="index.html#story">Our story</a><a href="index.html#location">Location</a></div>
+      <div class="footer-column"><h2>Say hello</h2><a href="tel:+639123456789">0912-345-6789</a><p>Beside Chapel, Matimbubong<br>San Ildefonso, Bulacan</p></div>
+      <div class="footer-column"><h2>Your account</h2><a href="login.html">Login</a><a href="signup.html">Create an account</a><a href="favorites.html">Favorites</a></div>
+    </div>
+    <div class="page-width footer-bottom"><span>© 2026 KLASIK CAFE. All Rights Reserved.</span></div>
+  </footer>
+</body>
+</html>

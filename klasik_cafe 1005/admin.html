@@ -74,6 +74,12 @@
           </div>
         </div>
 
+        <div class="admin-product-search">
+          <label for="admin-product-search-input">Search products</label>
+          <input id="admin-product-search-input" type="search" placeholder="Search by product or category..." autocomplete="off">
+          <p id="admin-product-search-status" class="admin-product-search-status" aria-live="polite"></p>
+          <div id="admin-product-search-suggestions" class="admin-product-search-suggestions" aria-label="Suggested product searches"></div>
+        </div>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
@@ -136,6 +142,7 @@
             <h2>Customer <em>Reviews</em></h2>
           </div>
         </div>
+        <p id="admin-review-realtime-status" class="admin-realtime-status" role="status" aria-live="polite"></p>
         <div id="admin-review-list" class="admin-review-list"></div>
       </section>
 
