@@ -214,7 +214,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const { user } = await signInCustomer(identity, password);
           const role = await getSignedInRole(user.id);
           showMessage(message, "Login successful! Redirecting...", true);
-          const destination = role === "admin" ? "admin.html" : role === "barista" ? "barista.html" : "index.html";
+          const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+          const customerDestination = ["orders.html", "customer.html#cart-section"].includes(returnTo) ? returnTo : "index.html";
+          const destination = role === "admin" ? "admin.html" : role === "barista" ? "barista.html" : customerDestination;
           window.setTimeout(() => {
             window.location.href = destination;
           }, 400);
@@ -226,9 +228,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      showMessage(message, "Login successful! Redirecting to the homepage...", true);
+      const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+      const destination = ["orders.html", "customer.html#cart-section"].includes(returnTo) ? returnTo : "index.html";
+      showMessage(message, destination === "index.html" ? "Login successful! Redirecting to the homepage..." : "Login successful! Returning to your order...", true);
       window.setTimeout(() => {
-        window.location.href = "index.html";
+        window.location.href = destination;
       }, 600);
     });
   }

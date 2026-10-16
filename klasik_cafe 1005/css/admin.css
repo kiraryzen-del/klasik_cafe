@@ -25,9 +25,14 @@
 }
 
 .admin-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
+  overflow-y: auto;
   background: var(--admin-sidebar);
   color: #fff;
   padding: 30px 18px;
@@ -512,7 +517,10 @@
   }
 
   .admin-sidebar {
+    position: static;
+    height: auto;
     min-height: auto;
+    overflow: visible;
     padding-bottom: 12px;
   }
 

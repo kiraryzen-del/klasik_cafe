@@ -721,10 +721,19 @@
 }
 
 .customer-page-switcher {
+  position: sticky;
+  top: 84px;
+  z-index: 19;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 20px 0 24px;
+  margin: 0 0 24px;
+  padding: 12px;
+  border: 1px solid var(--customer-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 8px 24px rgba(27, 50, 118, .08);
+  backdrop-filter: blur(10px);
 }
 
 .order-page-grid {

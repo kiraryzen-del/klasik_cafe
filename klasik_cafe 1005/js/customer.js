@@ -964,7 +964,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               confirmLabel: "Go to Login",
               cancelLabel: "Keep Shopping"
             });
-            if (goToLogin) window.location.href = "login.html";
+            if (goToLogin) window.location.href = "login.html?returnTo=orders.html";
             return;
           }
           try {

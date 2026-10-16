@@ -111,12 +111,30 @@ const categoryAliases = {
 };
 
 function applyCatalogStatus(card, item) {
-  card.dataset.supabaseId = item.id;
+  card.dataset.supabaseId = String(item.id);
   card.dataset.sourceKey = item.source_key || "";
   card.dataset.available = String(item.is_available);
   card.dataset.bestSeller = String(Boolean(item.best_seller));
-  const title = card.querySelector(".product-title h3")?.textContent.trim() || item.name;
+  card.dataset.mainCategory = item.mainCategory;
+  card.dataset.subcategory = item.filterSubcategory;
+  card.dataset.category = item.mainCategory;
+
+  const titleElement = card.querySelector(".product-title h3");
+  if (titleElement) titleElement.textContent = item.name;
+  const price = card.querySelector(".product-title span");
+  if (price) price.textContent = `₱${Number(item.price).toLocaleString("en-US")}`;
   const info = card.querySelector(".product-info");
+  const description = info?.querySelector("p");
+  if (description) description.textContent = item.description;
+  const image = card.querySelector(".product-image img");
+  if (image && item.image_path) {
+    image.src = resolveMenuImageUrl(item.image_path);
+    image.alt = item.name;
+  }
+  const categoryLabel = card.querySelector(".product-category");
+  if (categoryLabel) categoryLabel.textContent = item.category.name.toUpperCase();
+
+  const title = titleElement?.textContent.trim() || item.name;
   let availabilityLabel = card.querySelector(".product-availability");
   if (!availabilityLabel) {
     availabilityLabel = document.createElement("span");
@@ -247,25 +265,34 @@ function createAdminProductCard(template, item) {
 
 export async function applyCatalogToCards(container, catalog) {
   const staticCards = Array.from(container.querySelectorAll(".product-card"));
+  if (!staticCards.length) return;
+
   const usedCards = new Set();
+  const template = staticCards[0];
   const staticItems = catalog.filter((item) => item.source_key?.startsWith("homepage-"));
   staticItems.forEach((item) => {
-    const card = matchStaticCatalogCard(staticCards, usedCards, item);
-    if (!card) return;
+    const card = matchStaticCatalogCard(staticCards, usedCards, item)
+      || createAdminProductCard(template, item);
     usedCards.add(card);
+    if (!card.isConnected) container.append(card);
     applyCatalogStatus(card, item);
+    ensureCategoryFilter(container, item);
   });
 
-  if (!staticCards.length) return;
+  staticCards.forEach((card) => {
+    if (!usedCards.has(card)) card.remove();
+  });
+
   const adminItems = catalog.filter((item) => !item.source_key?.startsWith("homepage-"));
   adminItems.forEach((item) => {
     const existingCard = Array.from(container.querySelectorAll(".product-card"))
       .find((card) => card.dataset.supabaseId === String(item.id));
     if (existingCard) {
       applyCatalogStatus(existingCard, item);
+      ensureCategoryFilter(container, item);
       return;
     }
-    const card = createAdminProductCard(staticCards[0], item);
+    const card = createAdminProductCard(template, item);
     applyCatalogStatus(card, item);
     ensureCategoryFilter(container, item);
     container.append(card);

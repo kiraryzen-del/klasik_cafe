@@ -92,7 +92,10 @@ export async function requireRole(allowedRoles) {
   const client = requireSupabase();
   const user = await getCurrentUser();
   if (!user) {
-    window.location.replace("login.html");
+    const returnToCart = document.body.classList.contains("customer-body")
+      ? "?returnTo=customer.html%23cart-section"
+      : "";
+    window.location.replace(`login.html${returnTo}`);
     return null;
   }
 
