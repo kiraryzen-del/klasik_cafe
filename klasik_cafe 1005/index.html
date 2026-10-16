@@ -16,7 +16,7 @@
     {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
   </script>
   <script type="module" src="js/script.js"></script>
-  <script type="module" src="js/customer.js"></script>
+  <script type="module" src="js/menu-status.js"></script>
   <script type="module" src="js/favorites-ui.js"></script>
 </head>
 <body>
@@ -54,7 +54,7 @@
 
   <main>
     <section class="hero" id="home" aria-labelledby="hero-title">
-      <img class="hero-photo" src="images/klasikcafe.jpg" data-fallback="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=2200&q=85" alt="A warmly lit neighborhood cafe ready to welcome guests">
+      <img class="hero-photo" src="images/klasikcafe.jpg" data-fallback="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=2200&q=85" alt="A warmly lit neighborhood cafe ready to welcome guests" fetchpriority="high" loading="eager" decoding="async">
       <div class="hero-shade"></div>
       <div class="hero-content page-width">
         <p class="eyebrow eyebrow-light"><span></span> SAN ILDEFONSO, BULACAN</p>
@@ -677,7 +677,7 @@
           </article>
           <article class="product-card" data-category="add-ons" hidden>
             <div class="product-image image-frame">
-              <img src="images/products/spanish-latte.jpg" data-fallback="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=800&q=80" alt="Iced coffee with creamy milk" loading="lazy">
+              <img src="images/products/coffee/latte.jpg" data-fallback="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=800&q=80" alt="Iced coffee with creamy milk" loading="lazy">
               <span class="media-placeholder" hidden>Photo coming soon</span>
               <span class="product-category">ADD-ONS</span>
             </div>
@@ -685,7 +685,7 @@
           </article>
           <article class="product-card" data-category="add-ons" hidden>
             <div class="product-image image-frame">
-              <img src="images/products/caramelmacchiato.jpg" data-fallback="https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?auto=format&fit=crop&w=800&q=80" alt="A layered coffee drink finished with a creamy top" loading="lazy">
+              <img src="images/products/coffee/caramelmacchiato.jpg" data-fallback="https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?auto=format&fit=crop&w=800&q=80" alt="A layered coffee drink finished with a creamy top" loading="lazy">
               <span class="media-placeholder" hidden>Photo coming soon</span>
               <span class="product-category">ADD-ONS</span>
             </div>

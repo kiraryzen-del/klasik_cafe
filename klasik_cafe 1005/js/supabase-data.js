@@ -11,15 +11,18 @@ const subcategoryAliases = {
   "pastries-cheesecakes": "cheesecakes"
 };
 
-const menuImageUrls = typeof import.meta.glob === "function"
-  ? import.meta.glob("/images/**/*.{gif,jpeg,jpg,png,webp}", {
-    eager: true,
-    import: "default",
-    query: "?url"
-  })
-  : {};
+const menuImageUrls = import.meta.glob("/images/**/*.{gif,jpeg,jpg,png,webp}", {
+  eager: true,
+  import: "default",
+  query: "?url"
+});
 
-function resolveMenuImageUrl(imagePath) {
+const menuImageAliases = {
+  "images/products/spanish-latte.jpg": "images/products/coffee/latte.jpg",
+  "images/products/caramelmacchiato.jpg": "images/products/coffee/caramelmacchiato.jpg"
+};
+
+export function resolveMenuImageUrl(imagePath) {
   if (typeof imagePath !== "string" || !imagePath) return imagePath;
   if (/^(https?:|data:|blob:)/i.test(imagePath)) return imagePath;
 
@@ -27,13 +30,20 @@ function resolveMenuImageUrl(imagePath) {
   const imageKey = normalizedPath.startsWith("images/")
     ? `/${normalizedPath}`
     : `/images/${normalizedPath}`;
-  return menuImageUrls[imageKey] || imagePath;
+  const aliasKey = menuImageAliases[normalizedPath];
+  return menuImageUrls[imageKey] || (aliasKey ? menuImageUrls[`/${aliasKey}`] || aliasKey : null) || imagePath;
 }
 
 function throwIfError({ data, error }) {
   if (error) throw error;
   return data;
 }
+
+function isMissingBestSellerColumn(error) {
+  return error?.code === "42703" && /best_seller/i.test(error.message || "");
+}
+
+const bestSellerMigrationMessage = "Best Seller controls require Supabase migration 005_menu_item_best_seller.sql.";
 
 export async function fetchMenuCategories() {
   const client = requireSupabase();
@@ -46,14 +56,21 @@ export async function fetchMenuCategories() {
 
 export async function fetchMenuCatalog() {
   const client = requireSupabase();
-  const [categories, rows] = await Promise.all([
+  const [categories, initialRows] = await Promise.all([
     fetchMenuCategories(),
-    client
-      .from("menu_items")
-      .select("id, source_key, sort_order, category_id, name, description, price, image_path, is_available")
+    client.from("menu_items")
+      .select("id, source_key, sort_order, category_id, name, description, price, image_path, is_available, best_seller")
       .order("sort_order")
       .order("name")
   ]);
+  let rows = initialRows;
+  if (isMissingBestSellerColumn(rows.error)) {
+    console.warn(`${bestSellerMigrationMessage} The existing catalog is being loaded without Best Seller flags.`);
+    rows = await client.from("menu_items")
+      .select("id, source_key, sort_order, category_id, name, description, price, image_path, is_available")
+      .order("sort_order")
+      .order("name");
+  }
   if (rows.error) throw rows.error;
 
   const categoryById = new Map(categories.map((category) => [category.id, category]));
@@ -67,6 +84,7 @@ export async function fetchMenuCatalog() {
 
     return {
       ...row,
+      best_seller: Boolean(row.best_seller),
       category,
       mainCategoryName: parentCategory?.name || category.name,
       mainCategory: parentCategory?.slug || category.slug,
@@ -76,63 +94,181 @@ export async function fetchMenuCatalog() {
   });
 }
 
+const normalizeCatalogName = (value) => String(value || "")
+  .normalize("NFKD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLocaleLowerCase()
+  .replace(/[^a-z0-9]+/g, " ")
+  .trim();
+
+const categoryAliases = {
+  iced: "coffee",
+  hot: "coffee",
+  "iced-coffee": "coffee",
+  "hot-coffee": "coffee",
+  "noncoffee": "non-coffee",
+  "espesyal2": "non-coffee"
+};
+
+function applyCatalogStatus(card, item) {
+  card.dataset.supabaseId = item.id;
+  card.dataset.sourceKey = item.source_key || "";
+  card.dataset.available = String(item.is_available);
+  card.dataset.bestSeller = String(Boolean(item.best_seller));
+  const title = card.querySelector(".product-title h3")?.textContent.trim() || item.name;
+  const info = card.querySelector(".product-info");
+  let availabilityLabel = card.querySelector(".product-availability");
+  if (!availabilityLabel) {
+    availabilityLabel = document.createElement("span");
+    availabilityLabel.className = "product-availability availability unavailable";
+    availabilityLabel.setAttribute("role", "status");
+    info?.append(availabilityLabel);
+  }
+  availabilityLabel.hidden = Boolean(item.is_available);
+  availabilityLabel.textContent = item.is_available ? "" : "Unavailable";
+
+  let bestSellerLabel = card.querySelector(".product-best-seller");
+  if (item.best_seller) {
+    if (!bestSellerLabel) {
+      bestSellerLabel = document.createElement("span");
+      bestSellerLabel.className = "product-best-seller";
+      bestSellerLabel.innerHTML = '<span aria-hidden="true">◆</span> Best Seller';
+      info?.append(bestSellerLabel);
+    }
+    bestSellerLabel.hidden = false;
+  } else {
+    bestSellerLabel?.remove();
+  }
+
+  const button = card.querySelector(".customer-product-button");
+  if (button) {
+    button.setAttribute("aria-label", `Customize ${title}`);
+  }
+}
+
+function matchStaticCatalogCard(cards, usedCards, item) {
+  const itemName = normalizeCatalogName(item.name);
+  const itemImageUrl = item.image_path ? resolveMenuImageUrl(item.image_path) : "";
+  const imagePath = (value) => {
+    if (!value) return "";
+    try {
+      return new URL(value, document.baseURI).pathname.toLocaleLowerCase();
+    } catch {
+      return String(value).split(/[?#]/)[0].toLocaleLowerCase();
+    }
+  };
+  const itemImageKey = imagePath(itemImageUrl);
+  const candidatesByName = cards.filter((card) => {
+    if (usedCards.has(card)) return false;
+    return normalizeCatalogName(card.querySelector(".product-title h3")?.textContent) === itemName;
+  });
+
+  const scoreCard = (card) => {
+    let score = 0;
+    const cardMain = categoryAliases[card.dataset.mainCategory || card.dataset.category]
+      || card.dataset.mainCategory || card.dataset.category || "";
+    if (cardMain === item.mainCategory) score += 4;
+    const cardSubcategory = card.dataset.subcategory || "";
+    if (cardSubcategory === item.filterSubcategory || cardSubcategory === item.categorySlug) score += 2;
+    const cardImageKey = imagePath(card.querySelector(".product-image img")?.getAttribute("src"));
+    if (itemImageKey && cardImageKey === itemImageKey) score += 5;
+    return score;
+  };
+  if (candidatesByName.length) {
+    return candidatesByName.sort((left, right) => scoreCard(right) - scoreCard(left))[0];
+  }
+  if (!itemImageKey) return null;
+
+  const candidatesByImage = cards.filter((card) => !usedCards.has(card) && scoreCard(card) >= 5);
+  const ranked = candidatesByImage.sort((left, right) => scoreCard(right) - scoreCard(left));
+  return ranked.length === 1 || (ranked.length > 1 && scoreCard(ranked[0]) > scoreCard(ranked[1]))
+    ? ranked[0]
+    : null;
+}
+
+function ensureCategoryFilter(container, item) {
+  const groups = container.querySelector(".category-groups");
+  if (!groups) return;
+  let group = Array.from(groups.querySelectorAll(".main-category-button"))
+    .find((button) => button.dataset.mainCategory === item.mainCategory)?.closest(".category-group");
+  if (!group) {
+    group = document.createElement("div");
+    group.className = "category-group";
+    const button = document.createElement("button");
+    button.className = "main-category-button";
+    button.type = "button";
+    button.dataset.mainCategory = item.mainCategory;
+    button.textContent = item.mainCategoryName;
+    group.append(button);
+    groups.append(group);
+  }
+  if (item.filterSubcategory === item.mainCategory) return;
+  let list = group.querySelector(".category-list");
+  if (!list) {
+    list = document.createElement("div");
+    list.className = "category-list";
+    group.append(list);
+  }
+  if (Array.from(list.querySelectorAll(".category-chip")).some((chip) => chip.dataset.subcategory === item.filterSubcategory)) return;
+  const chip = document.createElement("button");
+  chip.className = "category-chip";
+  chip.type = "button";
+  chip.dataset.mainCategory = item.mainCategory;
+  chip.dataset.subcategory = item.filterSubcategory;
+  chip.dataset.category = item.filterSubcategory;
+  chip.textContent = item.category.name;
+  list.append(chip);
+}
+
+function createAdminProductCard(template, item) {
+  const card = template.cloneNode(true);
+  card.hidden = false;
+  card.removeAttribute("hidden");
+  card.dataset.mainCategory = item.mainCategory;
+  card.dataset.subcategory = item.filterSubcategory;
+  card.dataset.category = item.mainCategory;
+  card.dataset.sourceKey = "";
+  const title = card.querySelector(".product-title h3");
+  const price = card.querySelector(".product-title span");
+  const description = card.querySelector(".product-info p");
+  const image = card.querySelector(".product-image img");
+  if (title) title.textContent = item.name;
+  if (price) price.textContent = `₱${Number(item.price).toLocaleString("en-US")}`;
+  if (description) description.textContent = item.description;
+  if (image) {
+    image.src = resolveMenuImageUrl(item.image_path);
+    image.alt = item.name;
+    image.removeAttribute("data-fallback");
+  }
+  const categoryLabel = card.querySelector(".product-category");
+  if (categoryLabel) categoryLabel.textContent = item.category.name.toUpperCase();
+  return card;
+}
+
 export async function applyCatalogToCards(container, catalog) {
-  const cards = Array.from(container.querySelectorAll(".product-card"));
-  if (!cards.length) {
-    return;
-  }
+  const staticCards = Array.from(container.querySelectorAll(".product-card"));
+  const usedCards = new Set();
+  const staticItems = catalog.filter((item) => item.source_key?.startsWith("homepage-"));
+  staticItems.forEach((item) => {
+    const card = matchStaticCatalogCard(staticCards, usedCards, item);
+    if (!card) return;
+    usedCards.add(card);
+    applyCatalogStatus(card, item);
+  });
 
-  if (!catalog.length) {
-    cards.forEach((card) => {
-      card.hidden = true;
-    });
-    return;
-  }
-
-  for (let index = 0; index < catalog.length; index += 1) {
-    const item = catalog[index];
-    let card = cards[index];
-    if (!card) {
-      card = cards[0].cloneNode(true);
-      container.appendChild(card);
-      cards.push(card);
+  if (!staticCards.length) return;
+  const adminItems = catalog.filter((item) => !item.source_key?.startsWith("homepage-"));
+  adminItems.forEach((item) => {
+    const existingCard = Array.from(container.querySelectorAll(".product-card"))
+      .find((card) => card.dataset.supabaseId === String(item.id));
+    if (existingCard) {
+      applyCatalogStatus(existingCard, item);
+      return;
     }
-
-    const mainCategory = item.mainCategory;
-    card.dataset.supabaseId = item.id;
-    card.dataset.sourceKey = item.source_key || "";
-    card.dataset.mainCategory = mainCategory;
-    card.dataset.subcategory = item.filterSubcategory;
-    card.dataset.category = mainCategory;
-    card.dataset.available = String(item.is_available);
-
-    const title = card.querySelector(".product-title h3");
-    const price = card.querySelector(".product-title span");
-    const description = card.querySelector(".product-info p");
-    const image = card.querySelector(".product-image img");
-    if (title) title.textContent = item.name;
-    if (price) price.textContent = `₱${Number(item.price).toLocaleString("en-US")}`;
-    if (description) description.textContent = item.description;
-    if (image) {
-      image.src = resolveMenuImageUrl(item.image_path);
-      image.alt = item.name;
-    }
-    const categoryLabel = card.querySelector(".product-category");
-    if (categoryLabel) categoryLabel.textContent = item.category.name.toUpperCase();
-    let availabilityLabel = card.querySelector(".product-availability");
-    if (!availabilityLabel) {
-      availabilityLabel = document.createElement("span");
-      availabilityLabel.className = "product-availability availability unavailable";
-      availabilityLabel.setAttribute("role", "status");
-      card.querySelector(".product-info")?.append(availabilityLabel);
-    }
-    availabilityLabel.hidden = item.is_available;
-    availabilityLabel.textContent = item.is_available ? "" : "Unavailable";
-  }
-
-  cards.slice(catalog.length).forEach((card) => {
-    card.hidden = true;
-    card.dataset.available = "false";
+    const card = createAdminProductCard(staticCards[0], item);
+    applyCatalogStatus(card, item);
+    ensureCategoryFilter(container, item);
+    container.append(card);
   });
 }
 
@@ -141,7 +277,6 @@ export async function fetchMenuAddons() {
   return throwIfError(await client
     .from("menu_addons")
     .select("id, slug, name, price, is_available")
-    .in("slug", ["large-size-upgrade", "oreo", "biscoff", "cold-foam", "seasalt-cream", "extra-shot", "sauces-syrup", "oat-milk-substitute"])
     .order("name"));
 }
 
@@ -336,10 +471,22 @@ export async function saveMenuItem(item) {
     description: item.description,
     price: item.price,
     image_path: item.image,
-    is_available: item.available
+    is_available: item.available,
+    best_seller: Boolean(item.bestSeller)
+  };
+  const saveWithBestSellerFallback = async (operation) => {
+    let result = await operation(values);
+    if (isMissingBestSellerColumn(result.error)) {
+      if (values.best_seller) throw new Error(bestSellerMigrationMessage);
+      console.warn(`${bestSellerMigrationMessage} Saving this item without a Best Seller flag.`);
+      const legacyValues = { ...values };
+      delete legacyValues.best_seller;
+      result = await operation(legacyValues);
+    }
+    return throwIfError(result);
   };
   if (item.id) {
-    return throwIfError(await client.from("menu_items").update(values).eq("id", item.id).select("id").single());
+    return saveWithBestSellerFallback((row) => client.from("menu_items").update(row).eq("id", item.id).select("id").single());
   }
   const lastItem = throwIfError(await client
     .from("menu_items")
@@ -347,11 +494,22 @@ export async function saveMenuItem(item) {
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle());
-  const query = client.from("menu_items").insert({
+  const insertValues = {
     ...values,
     sort_order: Number(lastItem?.sort_order || 0) + 1
-  });
-  return throwIfError(await query.select("id").single());
+  };
+  const insertWithFallback = async (row) => {
+    let result = await client.from("menu_items").insert(row).select("id").single();
+    if (isMissingBestSellerColumn(result.error)) {
+      if (row.best_seller) throw new Error(bestSellerMigrationMessage);
+      console.warn(`${bestSellerMigrationMessage} Saving this item without a Best Seller flag.`);
+      const legacyValues = { ...row };
+      delete legacyValues.best_seller;
+      result = await client.from("menu_items").insert(legacyValues).select("id").single();
+    }
+    return throwIfError(result);
+  };
+  return insertWithFallback(insertValues);
 }
 
 export async function uploadMenuItemImage(file) {
@@ -380,6 +538,18 @@ export async function setMenuItemAvailability(itemId, isAvailable) {
     .eq("id", itemId)
     .select("id, is_available")
     .single());
+}
+
+export async function setMenuItemBestSeller(itemId, isBestSeller) {
+  const client = requireSupabase();
+  const result = await client
+    .from("menu_items")
+    .update({ best_seller: isBestSeller })
+    .eq("id", itemId)
+    .select("id, best_seller")
+    .single();
+  if (isMissingBestSellerColumn(result.error)) throw new Error(bestSellerMigrationMessage);
+  return throwIfError(result);
 }
 
 export async function deleteMenuItem(itemId) {

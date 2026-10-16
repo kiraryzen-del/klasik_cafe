@@ -11,6 +11,7 @@ import {
   fetchPlacedOrders,
   fetchReviews,
   fetchSuggestions,
+  resolveMenuImageUrl,
   subscribeToOrders,
   subscribeToReviews,
   submitCustomerOrder
@@ -48,6 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const modalQty = document.getElementById("customer-modal-qty");
 
   const orderStorageKey = "klasikCafeCustomerCart";
+  const supabaseCartStorageKey = "klasikCafeSupabaseCart";
   const orderHistoryKey = "klasikCafeCustomerOrders";
   const reviewsKey = "klasikCafeCustomerReviews";
   const suggestionsKey = "klasikCafeCustomerSuggestions";
@@ -74,6 +76,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     ["Sauces Syrup", 15],
     ["Oat Milk Substitute", 25]
   ]);
+
+  if (supabaseConfigured) {
+    document.querySelectorAll([
+      "input[name='custom-addon']",
+      "input[name='addon']",
+      "input[name='custom-size'][value='Large']",
+      "input[name='size'][value='Large']",
+      "input[name='custom-milk'][value='Oat']",
+      "input[name='milk'][value='Oat']"
+    ].join(", ")).forEach((input) => {
+      input.disabled = true;
+    });
+  }
 
   if (supabaseConfigured && document.body.classList.contains("customer-body")) {
     try {
@@ -191,11 +206,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getCart() {
-    return loadData(supabaseConfigured ? "klasikCafeSupabaseCart" : orderStorageKey, []);
+    const activeKey = supabaseConfigured ? supabaseCartStorageKey : orderStorageKey;
+    const legacyKey = supabaseConfigured ? orderStorageKey : supabaseCartStorageKey;
+    const cart = getExistingStoredData(activeKey);
+    if (cart.length) return cart;
+
+    const legacyCart = getExistingStoredData(legacyKey);
+    if (!legacyCart.length) return cart;
+    setCart(legacyCart);
+    return legacyCart;
   }
 
   function setCart(items) {
-    saveData(supabaseConfigured ? "klasikCafeSupabaseCart" : orderStorageKey, items);
+    const activeKey = supabaseConfigured ? supabaseCartStorageKey : orderStorageKey;
+    const legacyKey = supabaseConfigured ? orderStorageKey : supabaseCartStorageKey;
+    try {
+      localStorage.setItem(activeKey, JSON.stringify(items));
+      localStorage.removeItem(legacyKey);
+      return true;
+    } catch (error) {
+      console.error("Unable to save the customer cart:", error);
+      window.alert("Your cart could not be saved in this browser. Check your browser storage settings and try again.");
+      return false;
+    }
   }
 
   function getOrders() {
@@ -244,14 +277,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   function updateCartBadge() {
     const cart = getCart();
     if (cartBadge) {
-      cartBadge.textContent = String(cart.length);
+      cartBadge.textContent = String(cart.reduce((sum, item) => sum + Math.max(1, Number(item.quantity) || 1), 0));
     }
   }
 
   function getItemUnitPrice(item) {
-    const rawTotal = Number(item.total || 0);
     const quantity = Number(item.quantity || 1);
-    return quantity ? rawTotal / quantity : Number(item.unitPrice || 0);
+    const rawTotal = Number(item.total);
+    if (quantity && Number.isFinite(rawTotal) && item.total !== undefined && item.total !== null) {
+      return rawTotal / quantity;
+    }
+    return Number(item.unitPrice) || 0;
   }
 
   function updateCartItemQuantity(itemId, change) {
@@ -264,14 +300,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const unitPrice = getItemUnitPrice(item);
     cart[itemIndex].quantity = nextQuantity;
     cart[itemIndex].total = Number((unitPrice * nextQuantity).toFixed(2));
-    setCart(cart);
-    renderCart();
+    if (setCart(cart)) renderCart();
   }
 
   function removeCartItem(itemId) {
     const cart = getCart().filter((item) => String(item.id) !== String(itemId));
-    setCart(cart);
-    renderCart();
+    if (setCart(cart)) renderCart();
   }
 
   function renderCart() {
@@ -313,10 +347,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         `;
       }).join("");
 
-      const total = cart.reduce((sum, item) => sum + Number(item.total || 0), 0);
+      const total = cart.reduce((sum, item) => sum + getItemUnitPrice(item) * Number(item.quantity || 1), 0);
       if (orderTotal) orderTotal.textContent = money(total);
     }
 
+    if (placeOrderButton) placeOrderButton.disabled = cart.length === 0;
     orderItems.querySelector(".customer-legacy-cart-notice")?.remove();
     if (supabaseConfigured && getExistingStoredData(orderStorageKey).length) {
       const notice = document.createElement("p");
@@ -461,12 +496,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     menuGrid.innerHTML = remoteCatalog.map((item) => `
       <article class="customer-product-card" data-main-category="${escapeHtml(item.mainCategory)}">
         <div class="customer-product-image">
-          <img src="${escapeHtml(item.image_path)}" alt="${escapeHtml(item.name)}" loading="lazy">
+          <img src="${escapeHtml(resolveMenuImageUrl(item.image_path))}" alt="${escapeHtml(item.name)}" loading="lazy">
         </div>
         <div class="customer-product-info">
           <div class="product-header"><h3>${escapeHtml(item.name)}</h3><span>₱${escapeHtml(item.price)}</span></div>
           <p>${escapeHtml(item.description)}</p>
           <span class="availability ${item.is_available ? "" : "unavailable"}">${item.is_available ? "Available" : "Unavailable"}</span>
+          ${item.best_seller ? '<span class="product-best-seller"><span aria-hidden="true">◆</span> Best Seller</span>' : ""}
           <button class="button button-primary dashboard-customize" type="button" data-menu-id="${escapeHtml(item.id)}">Customize</button>
         </div>
       </article>
@@ -590,7 +626,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         unitPrice,
         total: unitPrice * quantity
       });
-      setCart(cart);
+      if (!setCart(cart)) return;
       closeModal();
       const status = document.getElementById("customer-cart-status");
       if (status) status.textContent = "Added to your cart. Review and submit it on the Order Review page.";
@@ -733,9 +769,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     modal?.querySelector("input[name='custom-ice'][value='Regular Ice']")?.click();
     if (modal) modal.hidden = false;
     if (modalQty) modalQty.textContent = String(activeQuantity);
+    const canOrder = available && (!supabaseConfigured || Boolean(menuItemId));
     if (modalAddButton) {
-      modalAddButton.disabled = !available;
-      modalAddButton.textContent = available ? "Add to Order" : "Unavailable";
+      modalAddButton.disabled = !canOrder;
+      modalAddButton.textContent = !available ? "Unavailable" : canOrder ? "Add to Order" : "Not orderable";
+    }
+    const orderStatus = document.getElementById("customer-cart-order-status");
+    if (orderStatus) {
+      orderStatus.textContent = !available
+        ? "This product is unavailable and cannot be ordered."
+        : canOrder
+          ? ""
+          : "This product is not linked to the online menu yet. Please contact the cafe to order it.";
+      orderStatus.hidden = !orderStatus.textContent;
     }
     updateModalTotal();
   }
@@ -836,7 +882,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (modalAddButton) {
     modalAddButton.addEventListener("click", () => {
-      if (!activeProduct || !activeProduct.available) return;
+      if (!activeProduct || !activeProduct.available || (supabaseConfigured && !activeProduct.menuItemId)) return;
       const details = getCustomizationDetails();
       if (!details) return;
       if (supabaseConfigured && details.addonIds.some((id) => !id)) {
@@ -859,7 +905,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         unitPrice: details.unitPrice
       });
 
-      setCart(cart);
+      if (!setCart(cart)) return;
       renderCart();
       closeCustomization();
     });
@@ -885,15 +931,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (placeOrderButton) {
     placeOrderButton.addEventListener("click", async () => {
       const cart = getCart();
-      if (!cart.length) return;
+      if (!cart.length || placeOrderButton.disabled) return;
 
-      const orderTotalValue = cart.reduce((sum, item) => sum + Number(item.total || 0), 0);
-      const confirmed = await confirmOrderReview({
-        items: cart,
-        total: orderTotalValue
-      });
-      if (!confirmed) return;
+      const orderTotalValue = cart.reduce((sum, item) => sum + getItemUnitPrice(item) * Number(item.quantity || 1), 0);
       placeOrderButton.disabled = true;
+      let confirmed;
+      try {
+        confirmed = await confirmOrderReview({
+          items: cart,
+          total: orderTotalValue
+        });
+      } catch (error) {
+        console.error("Order review confirmation failed:", error);
+        window.alert(error.message || "Your order could not be confirmed. Your cart has been kept.");
+        placeOrderButton.disabled = false;
+        return;
+      }
+      if (!confirmed) {
+        placeOrderButton.disabled = false;
+        return;
+      }
 
       if (supabaseConfigured) {
         let receipt;
@@ -976,12 +1033,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderOrdersHistory();
       remotePlacedOrders = null;
       renderPlacedOrders();
-      await showOrderReceipt({
-        orderNumber: nextId,
-        items: cart,
-        total: orderTotalValue
-      });
-      placeOrderButton.disabled = false;
+      try {
+        await showOrderReceipt({
+          orderNumber: nextId,
+          items: cart,
+          total: orderTotalValue
+        });
+      } finally {
+        placeOrderButton.disabled = false;
+      }
     });
   }
 
@@ -1108,6 +1168,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       addons.forEach((addon) => {
         addonByName.set(addon.name, addon);
       });
+      for (const [inputName, containerSelector] of [
+        ["custom-addon", "#customer-customization-modal .customer-option-stack"],
+        ["addon", "#customization-modal .customization-section .choice-row.stacked"]
+      ]) {
+        const container = document.querySelector(containerSelector);
+        if (!container) continue;
+        const existingNames = new Set(Array.from(container.querySelectorAll(`input[name='${inputName}']`), (input) => input.value));
+        addons.forEach((addon) => {
+          if (existingNames.has(addon.name)) return;
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.name = inputName;
+          input.value = addon.name;
+          input.dataset.price = String(addon.price);
+          input.dataset.supabaseId = addon.id;
+          input.disabled = !addon.is_available;
+          label.append(input, document.createTextNode(addon.is_available
+            ? ` ${addon.name} +₱${addon.price}`
+            : ` ${addon.name} (unavailable)`));
+          container.append(label);
+          existingNames.add(addon.name);
+        });
+      }
       expectedAddonPrices.forEach((_, name) => {
         if (!addonByName.has(name)) missingAddons.add(name);
       });

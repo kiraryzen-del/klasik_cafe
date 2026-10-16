@@ -24,6 +24,9 @@
 }
 
 .barista-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
   background: var(--barista-sidebar);
   color: #fff;
   padding: 30px 18px;
@@ -35,9 +38,22 @@
 
 .sidebar-nav {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 8px;
 }
+
+.sidebar-logout {
+  display: block;
+  margin-top: auto;
+  padding: 13px 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, .24);
+  color: rgba(255, 255, 255, .9);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sidebar-logout:hover { color: #fff; }
 
 .sidebar-nav a {
   display: block;
@@ -302,6 +318,7 @@
   }
 
   .barista-sidebar {
+    min-height: auto;
     padding-bottom: 12px;
   }
 

@@ -25,6 +25,9 @@
 }
 
 .admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
   background: var(--admin-sidebar);
   color: #fff;
   padding: 30px 18px;
@@ -36,9 +39,22 @@
 
 .sidebar-nav {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 8px;
 }
+
+.sidebar-logout {
+  display: block;
+  margin-top: auto;
+  padding: 13px 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, .24);
+  color: rgba(255, 255, 255, .9);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sidebar-logout:hover { color: #fff; }
 
 .sidebar-nav a {
   display: block;
@@ -212,6 +228,7 @@
   width: auto;
   height: 24px;
   flex: 0 0 auto;
+  cursor: pointer;
 }
 
 .availability-switch input {
@@ -251,7 +268,9 @@
 .availability-switch-label { min-width: 74px; color: #9b2c2c; font-size: 12px; font-weight: 700; }
 .availability-switch input:checked ~ .availability-switch-label { color: #187044; }
 .admin-product-thumbnail { display: block; width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
-.admin-form label.product-availability-control { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.admin-form label.product-availability-control { display: inline-flex; flex-direction: row; align-items: center; gap: 9px; }
+.best-seller-switch .availability-switch-label { min-width: 82px; }
+.best-seller-switch input:checked ~ .availability-switch-label { color: #187044; }
 
 .image-upload-field { display: flex; flex-direction: column; gap: 8px; }
 .admin-field-label { color: var(--admin-text); font-size: 12px; font-weight: 700; }
@@ -328,47 +347,6 @@
 .suggestion-status[data-status="resolved"] { color: #17633b; background: #e5f6ec; border-color: #a9dfbf; }
 .admin-status[data-status="cancelled"] { color: #922b2b; background: #fde8e8; border-color: #f3b9b9; }
 .suggestion-status { border-width: 1px; font-weight: 700; }
-
-.availability-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.availability-switch-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
-.availability-switch-track {
-  position: relative;
-  width: 42px;
-  height: 24px;
-  border-radius: 999px;
-  background: #b8c0cc;
-  transition: background .2s ease;
-}
-
-.availability-switch-track::after {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  content: "";
-  transition: transform .2s ease;
-}
-
-.availability-switch-input:checked + .availability-switch-track { background: #268354; }
-.availability-switch-input:checked + .availability-switch-track::after { transform: translateX(18px); }
-.availability-switch-input:focus-visible + .availability-switch-track { outline: 3px solid rgba(30, 51, 130, .38); outline-offset: 3px; }
 
 .admin-product-pagination {
   display: flex;
@@ -534,6 +512,7 @@
   }
 
   .admin-sidebar {
+    min-height: auto;
     padding-bottom: 12px;
   }
 

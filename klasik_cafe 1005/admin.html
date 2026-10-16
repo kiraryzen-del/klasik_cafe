@@ -34,8 +34,8 @@
         <a href="#admin-staff-accounts" id="staff-accounts-nav" hidden>Staff Accounts</a>
         <a href="#admin-cafe-info">Café Information</a>
         <a href="#admin-settings">Settings</a>
-        <a href="login.html">Logout</a>
       </nav>
+      <a class="sidebar-logout" href="login.html">Logout</a>
     </aside>
 
     <main class="admin-main">
@@ -93,6 +93,7 @@
                 <th>Category</th>
                 <th>Price</th>
                 <th>Availability</th>
+                <th>Best Seller</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -300,12 +301,11 @@
           </div>
           <p class="image-upload-status" id="product-image-upload-status" aria-live="polite"></p>
         </div>
-        <label class="product-availability-control">Availability
-          <span class="availability-switch">
-            <input type="checkbox" id="product-availability" checked>
-            <span class="availability-switch-track" aria-hidden="true"></span>
-            <span class="availability-switch-label">Available</span>
-          </span>
+        <label class="availability-switch product-availability-control">
+          <span>Availability</span>
+          <input type="checkbox" id="product-availability" checked>
+          <span class="availability-switch-track" aria-hidden="true"></span>
+          <span class="availability-switch-label">Available</span>
         </label>
         <div class="modal-actions">
           <button type="button" class="button button-outline" id="cancel-product-modal">Cancel</button>

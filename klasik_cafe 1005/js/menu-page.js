@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!menuContent) return;
 
   try {
-    const response = await fetch("index.html");
+    const response = await fetch("index.html", { cache: "no-cache" });
     if (!response.ok) throw new Error("Menu source unavailable");
 
     const source = new DOMParser().parseFromString(await response.text(), "text/html");
@@ -137,8 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     menu.querySelectorAll(".product-card").forEach((card, index) => {
-      if (index < 3) card.dataset.bestSeller = "true";
-      card.hidden = index >= 3;
+      card.hidden = false;
       const title = card.querySelector(".product-title h3");
       if (!title || !card.querySelector(".product-info")) return;
 

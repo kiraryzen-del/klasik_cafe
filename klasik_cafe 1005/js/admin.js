@@ -21,7 +21,9 @@ import {
   uploadMenuItemImage,
   subscribeToOrders,
   subscribeToReviews,
+  resolveMenuImageUrl,
   setMenuItemAvailability,
+  setMenuItemBestSeller,
   setOrderStatus,
   updateSuggestion
 } from "./supabase-data.js";
@@ -45,12 +47,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   let storeSettings = { ...defaultStoreSettings, ...loadData("klasikCafeStoreSettings", defaultStoreSettings) };
 
   const defaultProducts = [
-    { id: 1, name: "Amerikano", category: "coffee", mainCategory: "coffee", subcategory: "iced-coffee", description: "Dark, smooth, and refreshing.", price: 120, image: "images/products/coffee/amerikano.jpg", available: true },
-    { id: 2, name: "Classic Latte", category: "coffee", mainCategory: "coffee", subcategory: "hot-coffee", description: "Smooth espresso with steamed milk.", price: 150, image: "images/products/latte.jpg", available: true },
-    { id: 3, name: "Klasik Espesyal", category: "coffee", mainCategory: "coffee", subcategory: "espesyal", description: "Our signature house espresso special.", price: 180, image: "images/products/spanish-latte.jpg", available: true },
-    { id: 4, name: "Mocha Frappe", category: "non-coffee", mainCategory: "non-coffee", subcategory: "non-coffee", description: "Chocolate and cold cream blend.", price: 170, image: "images/products/icedmocha.jpg", available: true },
-    { id: 5, name: "Butter Croissant", category: "pastries", mainCategory: "pastries", subcategory: "pastries", description: "Buttery and flaky.", price: 90, image: "images/products/croissant.jpg", available: true },
-    { id: 6, name: "Extra Shot", category: "add-ons", mainCategory: "add-ons", subcategory: "add-ons", description: "Extra espresso boost.", price: 30, image: "images/products/coffee.jpg", available: true }
+    { id: 1, name: "Amerikano", category: "coffee", mainCategory: "coffee", subcategory: "iced-coffee", description: "Dark, smooth, and refreshing.", price: 120, image: "images/products/coffee/amerikano.jpg", available: true, bestSeller: false },
+    { id: 2, name: "Classic Latte", category: "coffee", mainCategory: "coffee", subcategory: "hot-coffee", description: "Smooth espresso with steamed milk.", price: 150, image: "images/products/latte.jpg", available: true, bestSeller: false },
+    { id: 3, name: "Klasik Espesyal", category: "coffee", mainCategory: "coffee", subcategory: "espesyal", description: "Our signature house espresso special.", price: 180, image: "images/products/coffee/latte.jpg", available: true, bestSeller: false },
+    { id: 4, name: "Mocha Frappe", category: "non-coffee", mainCategory: "non-coffee", subcategory: "non-coffee", description: "Chocolate and cold cream blend.", price: 170, image: "images/products/coffee/icedmocha.jpg", available: true, bestSeller: false },
+    { id: 5, name: "Butter Croissant", category: "pastries", mainCategory: "pastries", subcategory: "pastries", description: "Buttery and flaky.", price: 90, image: "images/products/croissant.jpg", available: true, bestSeller: false },
+    { id: 6, name: "Extra Shot", category: "add-ons", mainCategory: "add-ons", subcategory: "add-ons", description: "Extra espresso boost.", price: 30, image: "images/coffee.jpg", available: true, bestSeller: false }
   ];
 
   const defaultReviews = [
@@ -218,7 +220,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ).join("");
     }
     if (parentSelect) {
-      parentSelect.innerHTML = `<option value="">Main category</option>${roots.map((item) =>
+      parentSelect.innerHTML = `<option value="">Main category</option>${roots.filter((item) => item.slug !== "add-ons").map((item) =>
         `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`
       ).join("")}`;
     }
@@ -263,7 +265,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       return `
         <tr>
-          <td>${product.image ? `<img class="admin-product-thumbnail" src="${escapeHtml(product.image)}" alt="" loading="lazy">` : "—"}</td>
+          <td>${product.image ? `<img class="admin-product-thumbnail" src="${escapeHtml(resolveMenuImageUrl(product.image))}" alt="" loading="lazy">` : "—"}</td>
           <td>${escapeHtml(product.name)}</td>
           <td>${escapeHtml(categoryLabel)}</td>
           <td>₱${escapeHtml(product.price)}</td>
@@ -272,6 +274,13 @@ document.addEventListener("DOMContentLoaded", async () => {
               <input class="availability-switch-input" type="checkbox" data-product-id="${escapeHtml(product.id)}" ${product.available ? "checked" : ""}>
               <span class="availability-switch-track" aria-hidden="true"></span>
               <span class="availability-switch-label">${product.available ? "Available" : "Unavailable"}</span>
+            </label>
+          </td>
+          <td>
+            <label class="availability-switch best-seller-switch" aria-label="${product.bestSeller ? "Remove Best Seller from" : "Mark as Best Seller"}: ${escapeHtml(product.name)}">
+              <input class="best-seller-switch-input" type="checkbox" data-product-id="${escapeHtml(product.id)}" ${product.bestSeller ? "checked" : ""}>
+              <span class="availability-switch-track" aria-hidden="true"></span>
+              <span class="availability-switch-label">${product.bestSeller ? "Best Seller" : "Standard"}</span>
             </label>
           </td>
           <td>
@@ -302,7 +311,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!emptyRow) {
         emptyRow = document.createElement("tr");
         emptyRow.dataset.noProductMatches = "true";
-        emptyRow.innerHTML = "<td colspan='5'>No matching products.</td>";
+        emptyRow.innerHTML = "<td colspan='7'>No matching products.</td>";
         productTableBody.append(emptyRow);
       }
     } else {
@@ -496,6 +505,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("product-price").value = product.price;
       document.getElementById("product-image").value = product.image;
       productAvailability.checked = Boolean(product.available);
+      const availabilityLabel = productAvailability.closest(".availability-switch")?.querySelector(".availability-switch-label");
+      if (availabilityLabel) availabilityLabel.textContent = productAvailability.checked ? "Available" : "Unavailable";
       setProductImagePreview(product.image, "Current product image");
       document.querySelector("#product-form button[type='submit']").textContent = "Save Changes";
       document.getElementById("product-modal-title").textContent = "Edit Product";
@@ -507,6 +518,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("product-main-category").value = defaultMainCategory;
       populateSubcategoryOptions(defaultMainCategory, supabaseConfigured ? null : "iced-coffee");
       productAvailability.checked = true;
+      const availabilityLabel = productAvailability.closest(".availability-switch")?.querySelector(".availability-switch-label");
+      if (availabilityLabel) availabilityLabel.textContent = "Available";
       setProductImagePreview("", "");
       document.querySelector("#product-form button[type='submit']").textContent = "Add Product";
       document.getElementById("product-modal-title").textContent = "Add Product";
@@ -523,7 +536,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       productImageFileName.textContent = "";
       return;
     }
-    productImagePreview.src = source;
+    productImagePreview.src = resolveMenuImageUrl(source);
     productImageFileName.textContent = fileName;
     productImagePreviewWrap.hidden = false;
   }
@@ -649,7 +662,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       description: document.getElementById("product-description").value.trim(),
       price: Number(document.getElementById("product-price").value),
       image,
-      available: productAvailability.checked
+      available: productAvailability.checked,
+      bestSeller: Boolean(products.find((item) => String(item.id) === String(id))?.bestSeller)
     };
 
     if (!record.name || !record.description || !record.price) {
@@ -808,6 +822,25 @@ document.addEventListener("DOMContentLoaded", async () => {
           availabilitySwitch.checked = product.available;
           console.error("Menu availability update failed:", error);
           window.alert(error.message || "Unable to update availability.");
+        }
+      }
+    }
+
+    const bestSellerSwitch = event.target.closest(".best-seller-switch-input");
+    if (bestSellerSwitch) {
+      const id = bestSellerSwitch.dataset.productId;
+      const product = products.find((item) => String(item.id) === String(id));
+      if (product) {
+        const nextBestSeller = bestSellerSwitch.checked;
+        try {
+          if (supabaseConfigured) await setMenuItemBestSeller(id, nextBestSeller);
+          product.bestSeller = nextBestSeller;
+          if (!supabaseConfigured) saveData(storageKeys.products, products);
+          renderProducts();
+        } catch (error) {
+          bestSellerSwitch.checked = product.bestSeller;
+          console.error("Menu best-seller update failed:", error);
+          window.alert(error.message || "Unable to update Best Seller status.");
         }
       }
     }
@@ -1042,7 +1075,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         description: item.description,
         price: item.price,
         image: item.image_path,
-        available: item.is_available
+        available: item.is_available,
+        bestSeller: item.best_seller
       })));
       renderProducts();
       window.alert(`${result.message} Imported: ${result.inserted}. Skipped: ${result.skipped}.`);
@@ -1056,16 +1090,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const access = await requireRole(["admin"]);
       if (!access) return;
-      const [remoteCategories, remoteCatalog, remoteReviews, remoteSuggestions, remoteAddons, remoteOrders, remoteCafeInfo, remoteStoreSettings] = await Promise.all([
+      const [remoteCategories, remoteCatalog, remoteReviews, remoteSuggestions, remoteAddons, remoteOrders, remoteCafeInfo] = await Promise.all([
         fetchMenuCategories(),
         fetchMenuCatalog(),
         fetchReviews({ includeModeration: true }),
         fetchSuggestions(),
         fetchAllMenuAddons(),
         fetchStaffOrders(),
-        fetchCafeInfo(),
-        fetchStoreSettings()
+        fetchCafeInfo()
       ]);
+      let remoteStoreSettings = null;
+      try {
+        remoteStoreSettings = await fetchStoreSettings();
+      } catch (error) {
+        console.error("Store settings could not be loaded:", error);
+        if (storeSettingsMessage) {
+          storeSettingsMessage.textContent = `Store settings could not be loaded. Verify migration 004 and admin access. ${error.message || ""}`.trim();
+        }
+      }
       categories = remoteCategories;
       products.splice(0, products.length, ...remoteCatalog.map((item) => ({
         id: item.id,
@@ -1078,7 +1120,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         description: item.description,
         price: item.price,
         image: item.image_path,
-        available: item.is_available
+        available: item.is_available,
+        bestSeller: item.best_seller
       })));
       replaceAdminReviews(remoteReviews);
       suggestions.splice(0, suggestions.length, ...remoteSuggestions.map((item) => ({

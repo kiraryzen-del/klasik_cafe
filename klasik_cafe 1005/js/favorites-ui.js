@@ -1,4 +1,5 @@
 const favoritesKey = "klasikCafeCustomerFavorites";
+const cartKeys = ["klasikCafeSupabaseCart", "klasikCafeCustomerCart"];
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -133,9 +134,28 @@ function renderFavorites() {
   `).join("");
 }
 
+function updateCartBadge() {
+  const badge = document.getElementById("cart-count-badge");
+  if (!badge) return;
+  for (const key of cartKeys) {
+    try {
+      const cart = JSON.parse(localStorage.getItem(key) || "[]");
+      if (!Array.isArray(cart)) throw new TypeError("Saved cart must be a list.");
+      if (cart.length) {
+        badge.textContent = String(cart.reduce((sum, item) => sum + Math.max(1, Number(item.quantity) || 1), 0));
+        return;
+      }
+    } catch (error) {
+      console.error(`Unable to read saved cart "${key}":`, error);
+    }
+  }
+  badge.textContent = "0";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   decorateCards();
   renderFavorites();
+  updateCartBadge();
 
   document.addEventListener("click", (event) => {
     const favoriteButton = event.target.closest(".product-favorite-button");
@@ -177,7 +197,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.addEventListener("storage", (event) => {
-  if (event.key !== favoritesKey) return;
-  syncFavoriteButtons();
-  renderFavorites();
+  if (event.key === favoritesKey) {
+    syncFavoriteButtons();
+    renderFavorites();
+  }
+  if (cartKeys.includes(event.key)) updateCartBadge();
 });

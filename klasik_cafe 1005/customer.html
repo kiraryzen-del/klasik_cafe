@@ -28,12 +28,13 @@
       <nav class="customer-nav" aria-label="Customer navigation">
         <a class="nav-link" href="index.html">Home</a>
         <a class="nav-link" href="#menu-section">Menu</a>
+        <a class="nav-link" href="#cart-section">Cart</a>
         <a class="nav-link" href="#orders-section">My Orders</a>
-        <a class="nav-link" href="favorites.html">Favorites</a>
+        <a class="nav-link" href="#favorites-section">Favorites</a>
+        <a class="nav-link" href="#placed-orders-section">Placed Orders</a>
         <a class="nav-link" href="#reviews-section">Reviews</a>
         <a class="nav-link" href="#suggestions-section">Suggestions</a>
         <a class="nav-link" href="#profile-section">Profile</a>
-        <a class="button button-primary button-small" href="login.html">Logout</a>
       </nav>
     </div>
   </header>
@@ -53,6 +54,15 @@
       </button>
       <button class="quick-card" type="button" data-scroll-target="orders-section">
         <span>My Orders</span>
+      </button>
+      <button class="quick-card" type="button" data-scroll-target="cart-section">
+        <span>Cart</span>
+      </button>
+      <button class="quick-card" type="button" data-scroll-target="favorites-section">
+        <span>Favorites</span>
+      </button>
+      <button class="quick-card" type="button" data-scroll-target="placed-orders-section">
+        <span>Placed Orders</span>
       </button>
       <button class="quick-card" type="button" data-scroll-target="reviews-section">
         <span>Leave a Review</span>
@@ -81,6 +91,19 @@
       <a class="button button-outline button-small" href="orders.html">Review cart and checkout</a>
     </section>
 
+    <section class="panel customer-panel" id="cart-section" aria-labelledby="cart-title">
+      <div class="customer-panel-header">
+        <p class="eyebrow eyebrow-blue"><span></span> YOUR CURRENT ORDER</p>
+        <h3 id="cart-title">Shopping <em>Cart</em></h3>
+      </div>
+      <div id="customer-order-items" class="customer-order-items"></div>
+      <div class="customer-total-row"><span>Total</span><strong id="customer-order-total">₱0</strong></div>
+      <label class="customer-field-label" for="customer-special-request">Special Request</label>
+      <textarea id="customer-special-request" rows="3" placeholder="Please write any special instructions..."></textarea>
+      <button class="button button-primary button-wide" id="customer-place-order" type="button">Place Order</button>
+      <p class="placed-orders-note">After placing your order, present the official receipt and order code at the café.</p>
+    </section>
+
     <section class="orders-layout">
       <div class="panel" id="orders-section" aria-labelledby="orders-title">
         <div class="section-header compact-header">
@@ -90,7 +113,6 @@
           </div>
         </div>
         <div id="customer-orders-list" class="order-list"></div>
-        <a class="button button-outline button-small" href="placed-orders.html">View Placed Orders</a>
       </div>
 
       <aside class="panel" id="profile-section" aria-labelledby="profile-title">
@@ -113,6 +135,24 @@
           <li><span>Preferred pickup</span><strong>Takeaway</strong></li>
         </ul>
       </aside>
+    </section>
+
+    <section class="panel customer-panel customer-favorites-panel" id="favorites-section" aria-labelledby="customer-favorites-title">
+      <div class="customer-panel-header">
+        <p class="eyebrow eyebrow-blue"><span></span> YOUR SAVED ITEMS</p>
+        <h3 id="customer-favorites-title">Favorite <em>Menu Items</em></h3>
+      </div>
+      <div id="customer-favorites-list" class="customer-favorites-list"></div>
+    </section>
+
+    <section class="panel customer-panel customer-history-panel" id="placed-orders-section" aria-labelledby="placed-orders-title">
+      <div class="customer-panel-header">
+        <p class="eyebrow eyebrow-blue"><span></span> PENDING ORDERS</p>
+        <h3 id="placed-orders-title">Placed <em>Orders</em></h3>
+      </div>
+      <p class="placed-orders-note">Please present your official receipt and order code at the café. A bartender must confirm your order before it appears in Order History.</p>
+      <div id="customer-placed-orders-list" class="customer-history-list" aria-live="polite"></div>
+      <p id="customer-placed-orders-realtime-status" class="customer-message" role="status" aria-live="polite"></p>
     </section>
 
     <section class="panel" id="reviews-section" aria-labelledby="reviews-title">
@@ -171,6 +211,10 @@
         </div>
       </div>
     </section>
+
+    <div class="customer-logout-row">
+      <a class="button button-outline button-small" href="login.html">Logout</a>
+    </div>
   </main>
 
   <div id="customization-modal" class="modal-backdrop" hidden>
