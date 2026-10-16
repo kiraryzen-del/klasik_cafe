@@ -6,7 +6,7 @@ The Supabase integration is optional until credentials are configured. Without t
 
 1. Create a project at [supabase.com](https://supabase.com/) and wait for its database to finish provisioning.
 2. Open **SQL Editor** in the Supabase dashboard.
-3. Run `migrations/001_initial_schema.sql` first, followed by `migrations/002_seed_existing_menu.sql`, `migrations/003_username_availability.sql`, and `migrations/004_admin_catalog_storage_and_order_status.sql`, in that order. Apply migration 004 to existing projects too; it enables customer visibility for unavailable products/add-ons, configures the product image bucket, creates admin-only persistent store settings, allows admins to accept orders, and collapses any Add-ons subcategories into the main category without deleting products.
+3. Run `migrations/001_initial_schema.sql` first, followed by `migrations/002_seed_existing_menu.sql`, `migrations/003_order_workflow_and_customizations.sql`, `migrations/003_username_availability.sql`, `migrations/004_admin_catalog_storage_and_order_status.sql`, and `migrations/005_menu_item_best_seller.sql`, in that order. Apply migrations 004 and 005 to existing projects too. Migration 004 enables customer visibility for unavailable products/add-ons, configures the product image bucket, creates admin-only persistent store settings, allows admins to accept orders, and collapses any Add-ons subcategories into the main category without deleting products. Migration 005 adds the Best Seller flag used by the menu and admin controls.
 4. In **Project Settings → API**, copy the project URL and the **publishable key** (or legacy `anon` key).
 5. In the project root, copy `.env.example` to `.env` and fill in:
 
@@ -46,7 +46,7 @@ where p.id = u.id
 
 Confirm that one row was updated. Then sign out and sign back in before opening `admin.html`.
 
-The Admin dashboard can invite admin and barista accounts through the `admin-create-staff` Edge Function. Invitations are sent by email; recipients choose their own passwords. The function verifies the caller's session and admin role before assigning a staff role. Deploy it from the project root after installing/logging into the Supabase CLI and linking this project:
+The Admin dashboard can invite admin and barista accounts through the `admin-create-staff` Edge Function. Invitations are sent by email; recipients choose their own passwords. The function verifies the caller's session and admin role before assigning a staff role. Its `verify_jwt = false` setting in `supabase/config.toml` lets unauthenticated CORS preflight requests reach the function; the function itself still validates the caller's bearer token and admin role. Deploy or redeploy it from the project root after installing/logging into the Supabase CLI and linking this project:
 
 ```powershell
 npx supabase login
@@ -54,7 +54,7 @@ npx supabase link --project-ref your-project-ref
 npx supabase functions deploy admin-create-staff
 ```
 
-For a deployed website, set the `APP_ORIGIN` Edge Function secret to its exact origin (for example `https://cafe.example.com`). Local Vite origins on port 5173 and Live Server origins on ports 5500 and 5501 are allowed for development. Supabase supplies its URL, anon key, and service-role key to deployed Edge Functions; never add the service-role key to `.env`, frontend code, or a public repository. Set the Supabase project's **Authentication → URL Configuration → Site URL** to the website location so invitation links return to the site.
+If invitations still fail the CORS check, confirm that the function redeployed with this config and that the page's origin is listed in `allowedOrigins` in `supabase/functions/admin-create-staff/index.ts`. For a deployed website, set the `APP_ORIGIN` Edge Function secret to its exact origin (for example `https://cafe.example.com`). Local Vite origins on port 5173 and Live Server origins on ports 5500 and 5501 are allowed for development. Supabase supplies its URL, anon key, and service-role key to deployed Edge Functions; never add the service-role key to `.env`, frontend code, or a public repository. Set the Supabase project's **Authentication → URL Configuration → Site URL** to the website location so invitation links return to the site.
 
 After linking the project, configure the production origin with:
 
