@@ -11,6 +11,25 @@ const subcategoryAliases = {
   "pastries-cheesecakes": "cheesecakes"
 };
 
+const menuImageUrls = typeof import.meta.glob === "function"
+  ? import.meta.glob("/images/**/*.{gif,jpeg,jpg,png,webp}", {
+    eager: true,
+    import: "default",
+    query: "?url"
+  })
+  : {};
+
+function resolveMenuImageUrl(imagePath) {
+  if (typeof imagePath !== "string" || !imagePath) return imagePath;
+  if (/^(https?:|data:|blob:)/i.test(imagePath)) return imagePath;
+
+  const normalizedPath = imagePath.replace(/\\/g, "/").replace(/^\.?\//, "");
+  const imageKey = normalizedPath.startsWith("images/")
+    ? `/${normalizedPath}`
+    : `/images/${normalizedPath}`;
+  return menuImageUrls[imageKey] || imagePath;
+}
+
 function throwIfError({ data, error }) {
   if (error) throw error;
   return data;
@@ -59,8 +78,15 @@ export async function fetchMenuCatalog() {
 
 export async function applyCatalogToCards(container, catalog) {
   const cards = Array.from(container.querySelectorAll(".product-card"));
-  if (catalog.length < cards.length) {
-    throw new Error(`Supabase has ${catalog.length} menu items but the existing page contains ${cards.length}; the original catalog was left unchanged.`);
+  if (!cards.length) {
+    return;
+  }
+
+  if (!catalog.length) {
+    cards.forEach((card) => {
+      card.hidden = true;
+    });
+    return;
   }
 
   for (let index = 0; index < catalog.length; index += 1) {
@@ -79,7 +105,6 @@ export async function applyCatalogToCards(container, catalog) {
     card.dataset.subcategory = item.filterSubcategory;
     card.dataset.category = mainCategory;
     card.dataset.available = String(item.is_available);
-    card.hidden = !item.is_available;
 
     const title = card.querySelector(".product-title h3");
     const price = card.querySelector(".product-title span");
@@ -89,12 +114,26 @@ export async function applyCatalogToCards(container, catalog) {
     if (price) price.textContent = `₱${Number(item.price).toLocaleString("en-US")}`;
     if (description) description.textContent = item.description;
     if (image) {
-      image.src = item.image_path;
+      image.src = resolveMenuImageUrl(item.image_path);
       image.alt = item.name;
     }
     const categoryLabel = card.querySelector(".product-category");
     if (categoryLabel) categoryLabel.textContent = item.category.name.toUpperCase();
+    let availabilityLabel = card.querySelector(".product-availability");
+    if (!availabilityLabel) {
+      availabilityLabel = document.createElement("span");
+      availabilityLabel.className = "product-availability availability unavailable";
+      availabilityLabel.setAttribute("role", "status");
+      card.querySelector(".product-info")?.append(availabilityLabel);
+    }
+    availabilityLabel.hidden = item.is_available;
+    availabilityLabel.textContent = item.is_available ? "" : "Unavailable";
   }
+
+  cards.slice(catalog.length).forEach((card) => {
+    card.hidden = true;
+    card.dataset.available = "false";
+  });
 }
 
 export async function fetchMenuAddons() {
@@ -102,7 +141,7 @@ export async function fetchMenuAddons() {
   return throwIfError(await client
     .from("menu_addons")
     .select("id, slug, name, price, is_available")
-    .eq("is_available", true)
+    .in("slug", ["large-size-upgrade", "oreo", "biscoff", "cold-foam", "seasalt-cream", "extra-shot", "sauces-syrup", "oat-milk-substitute"])
     .order("name"));
 }
 
@@ -139,6 +178,17 @@ export async function fetchCustomerOrders() {
   const rows = throwIfError(await client
     .from("orders")
     .select("id, order_number, status, total, special_requests, created_at, order_items(product_name, quantity, unit_price, customizations, selected_addons)")
+    .neq("status", "Pending")
+    .order("created_at", { ascending: false }));
+  return rows.map(mapOrder);
+}
+
+export async function fetchPlacedOrders() {
+  const client = requireSupabase();
+  const rows = throwIfError(await client
+    .from("orders")
+    .select("id, order_number, status, total, special_requests, created_at, order_items(product_name, quantity, unit_price, customizations, selected_addons)")
+    .eq("status", "Pending")
     .order("created_at", { ascending: false }));
   return rows.map(mapOrder);
 }
@@ -169,10 +219,16 @@ export async function submitCustomerOrder(cart, specialRequest) {
     };
   });
 
-  return throwIfError(await client.rpc("place_order", {
+  const orderId = throwIfError(await client.rpc("place_order", {
     p_items: items,
     p_special_requests: specialRequest || ""
   }));
+  const order = throwIfError(await client
+    .from("orders")
+    .select("order_number, total")
+    .eq("id", orderId)
+    .single());
+  return { id: orderId, orderNumber: order.order_number, total: Number(order.total) };
 }
 
 export async function setOrderStatus(orderId, status) {
@@ -201,6 +257,22 @@ export function subscribeToReviews(onChange, onStatus = () => {}) {
       event: "*",
       schema: "public",
       table: "reviews"
+    }, (payload) => {
+      Promise.resolve(onChange(payload)).catch((error) => onStatus("CALLBACK_ERROR", error));
+    })
+    .subscribe((status, error) => onStatus(status, error));
+
+  return () => client.removeChannel(channel);
+}
+
+export function subscribeToOrders(onChange, onStatus = () => {}) {
+  const client = requireSupabase();
+  const channel = client
+    .channel(`orders-live-${Date.now()}`)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "orders"
     }, (payload) => {
       Promise.resolve(onChange(payload)).catch((error) => onStatus("CALLBACK_ERROR", error));
     })
@@ -282,12 +354,32 @@ export async function saveMenuItem(item) {
   return throwIfError(await query.select("id").single());
 }
 
+export async function uploadMenuItemImage(file) {
+  const client = requireSupabase();
+  const bucket = "menu-images";
+  const safeName = file.name.toLocaleLowerCase().replace(/[^a-z0-9.-]+/g, "-");
+  const objectPath = `${crypto.randomUUID()}-${safeName}`;
+  const { error } = await client.storage.from(bucket).upload(objectPath, file, {
+    cacheControl: "3600",
+    contentType: file.type,
+    upsert: false
+  });
+  if (error) {
+    throw new Error(`Image upload failed. Check that the public "${bucket}" Storage bucket exists and allows admin uploads. ${error.message}`);
+  }
+  const { data } = client.storage.from(bucket).getPublicUrl(objectPath);
+  if (!data?.publicUrl) throw new Error(`The image was uploaded, but Supabase did not return a public URL for the "${bucket}" bucket.`);
+  return data.publicUrl;
+}
+
 export async function setMenuItemAvailability(itemId, isAvailable) {
   const client = requireSupabase();
   return throwIfError(await client
     .from("menu_items")
     .update({ is_available: isAvailable })
-    .eq("id", itemId));
+    .eq("id", itemId)
+    .select("id, is_available")
+    .single());
 }
 
 export async function deleteMenuItem(itemId) {
@@ -353,4 +445,27 @@ export async function fetchCafeInfo() {
     .select("name, address, opening_hours, phone, facebook, instagram, tiktok, description")
     .eq("singleton", true)
     .maybeSingle());
+}
+
+export async function fetchStoreSettings() {
+  const client = requireSupabase();
+  return throwIfError(await client
+    .from("store_settings")
+    .select("theme, mobile_menu_enabled, auto_save_enabled")
+    .eq("singleton", true)
+    .single());
+}
+
+export async function saveStoreSettings(settings) {
+  const client = requireSupabase();
+  return throwIfError(await client
+    .from("store_settings")
+    .upsert({
+      singleton: true,
+      theme: settings.theme,
+      mobile_menu_enabled: settings.mobileMenuEnabled,
+      auto_save_enabled: settings.autoSaveEnabled
+    }, { onConflict: "singleton" })
+    .select("theme, mobile_menu_enabled, auto_save_enabled")
+    .single());
 }

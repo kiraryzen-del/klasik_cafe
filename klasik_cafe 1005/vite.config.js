@@ -9,6 +9,7 @@ const pages = [
   "signup.html",
   "menu.html",
   "orders.html",
+  "placed-orders.html",
   "order-history.html",
   "favorites.html",
   "feedback.html",
@@ -18,6 +19,7 @@ const pages = [
 ];
 
 export default defineConfig({
+  base: "./",
   build: {
     rollupOptions: {
       input: Object.fromEntries(

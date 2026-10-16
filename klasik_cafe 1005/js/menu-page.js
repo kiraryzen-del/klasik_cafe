@@ -28,6 +28,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (intro) intro.textContent = "A few café favorites, made fresh. Choose a category to explore more.";
     menu.querySelector(".featured-menu-action")?.remove();
 
+    const productGrid = menu.querySelector(".product-grid");
+    let categoryGroups = menu.querySelector(".category-groups");
+    if (!categoryGroups) {
+      categoryGroups = document.createElement("div");
+      categoryGroups.className = "category-groups";
+      productGrid?.before(categoryGroups);
+    }
+
     const search = document.createElement("div");
     search.className = "menu-search";
     search.innerHTML = `
@@ -42,21 +50,91 @@ document.addEventListener("DOMContentLoaded", async () => {
       <p class="menu-search-status" id="menu-search-status" aria-live="polite"></p>
       <div class="menu-search-suggestions" id="menu-search-suggestions" aria-label="Suggested menu searches"></div>
     `;
-    menu.querySelector(".category-groups")?.before(search);
+    categoryGroups.before(search);
 
-    const categoryGroups = menu.querySelector(".category-groups");
-    if (categoryGroups) {
-      const bestSellersGroup = document.createElement("div");
-      bestSellersGroup.className = "category-group is-open";
-      bestSellersGroup.innerHTML = '<button class="main-category-button is-active" type="button" data-main-category="best-sellers">Best sellers</button>';
-      categoryGroups.prepend(bestSellersGroup);
-      categoryGroups.querySelector('[data-main-category="add-ons"]')?.closest(".category-group")?.querySelector(".category-list")?.remove();
-      categoryGroups.querySelectorAll(".category-group:not(:first-child)").forEach((group) => {
-        group.classList.remove("is-open");
-        group.querySelector(".main-category-button")?.classList.remove("is-active");
-        group.querySelector(".category-list")?.classList.remove("is-open");
-      });
-    }
+    const bestSellersGroup = document.createElement("div");
+    bestSellersGroup.className = "category-group is-open";
+    bestSellersGroup.innerHTML = '<button class="main-category-button is-active" type="button" data-main-category="best-sellers">Best sellers</button>';
+    categoryGroups.prepend(bestSellersGroup);
+
+    const mainCategoryAliases = {
+      iced: "coffee",
+      hot: "coffee",
+      "iced-coffee": "coffee",
+      "hot-coffee": "coffee",
+      espesyal: "coffee",
+      espesyal2: "non-coffee",
+      noncoffee: "non-coffee",
+      "non-coffee": "non-coffee",
+      cookies: "pastries",
+      smores: "pastries",
+      cheesecakes: "pastries"
+    };
+    const subcategoryAliases = {
+      iced: "iced-coffee",
+      hot: "hot-coffee",
+      espesyal: "espesyal",
+      espesyal2: "espesyal",
+      noncoffee: "non-coffee",
+      cookies: "cookies",
+      smores: "smores",
+      cheesecakes: "cheesecakes",
+      "add-ons": "add-ons"
+    };
+    const categoryDefinitions = [
+      { id: "coffee", label: "Coffee", subcategories: [["iced-coffee", "Iced Coffee"], ["hot-coffee", "Hot Coffee"], ["espesyal", "Espesyal"]] },
+      { id: "non-coffee", label: "Non Coffee", subcategories: [["non-coffee", "Non Coffee"], ["espesyal", "Espesyal"]] },
+      { id: "matcha", label: "Matcha Series" },
+      { id: "pastries", label: "Pastries", subcategories: [["smores", "Smores"], ["cookies", "Cookies"], ["cheesecakes", "Cheesecakes"]] },
+      { id: "snacks", label: "Snacks" },
+      { id: "pasta", label: "Pasta" },
+      { id: "add-ons", label: "Add-ons" }
+    ];
+    const categories = new Set();
+    menu.querySelectorAll(".product-card").forEach((card) => {
+      const rawCategory = card.dataset.mainCategory || card.dataset.category || "";
+      const category = mainCategoryAliases[rawCategory] || rawCategory;
+      const subcategory = card.dataset.subcategory || subcategoryAliases[rawCategory] || rawCategory;
+      if (!category || category === "best-sellers") return;
+      card.dataset.mainCategory = category;
+      card.dataset.subcategory = subcategory;
+      categories.add(category);
+    });
+
+    categoryDefinitions.forEach(({ id, label, subcategories }) => {
+      if (!categories.has(id)) return;
+      const group = document.createElement("div");
+      group.className = "category-group";
+      const button = document.createElement("button");
+      button.className = "main-category-button";
+      button.type = "button";
+      button.dataset.mainCategory = id;
+      button.textContent = label;
+      group.append(button);
+      const availableSubcategories = subcategories?.filter(([subcategory]) => menu.querySelector(`.product-card[data-main-category="${id}"][data-subcategory="${subcategory}"]`)) || [];
+      if (availableSubcategories.length) {
+        const list = document.createElement("div");
+        list.className = "category-list";
+        availableSubcategories.forEach(([subcategory, subcategoryLabel]) => {
+          const chip = document.createElement("button");
+          chip.className = "category-chip";
+          chip.type = "button";
+          chip.dataset.mainCategory = id;
+          chip.dataset.subcategory = subcategory;
+          chip.dataset.category = subcategory;
+          chip.textContent = subcategoryLabel;
+          list.append(chip);
+        });
+        group.append(list);
+      }
+      categoryGroups.append(group);
+    });
+
+    categoryGroups.querySelectorAll(".category-group:not(:first-child)").forEach((group) => {
+      group.classList.remove("is-open");
+      group.querySelector(".main-category-button")?.classList.remove("is-active");
+      group.querySelector(".category-list")?.classList.remove("is-open");
+    });
 
     menu.querySelectorAll(".product-card").forEach((card, index) => {
       if (index < 3) card.dataset.bestSeller = "true";
@@ -71,7 +149,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       button.setAttribute("aria-label", `Customize ${title.textContent.trim()}`);
       card.querySelector(".product-info").appendChild(button);
     });
-    menuContent.replaceChildren(menu);
     menuContent.replaceChildren(menu);
 
     if (supabaseConfigured) {
@@ -123,7 +200,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       suggestions.replaceChildren();
-      if (!query || matchingCards.length) {
+      if (!query) {
+        searchStatus.textContent = "";
+        return;
+      }
+
+      const matchingNames = cards.map((card) => card.querySelector(".product-title h3")?.textContent.trim() || "")
+        .filter((name, index, list) => name && list.indexOf(name) === index)
+        .filter((name) => normalize(name).includes(query))
+        .sort((left, right) => Number(!normalize(left).startsWith(query)) - Number(!normalize(right).startsWith(query)) || left.localeCompare(right))
+        .slice(0, 5);
+      if (matchingNames.length) {
+        searchStatus.textContent = "Menu suggestions";
+        matchingNames.forEach((name) => {
+          const suggestion = document.createElement("button");
+          suggestion.type = "button";
+          suggestion.className = "menu-search-suggestion";
+          suggestion.textContent = name;
+          suggestion.addEventListener("click", () => {
+            searchInput.value = name;
+            applyMenuSearch();
+            searchInput.focus();
+          });
+          suggestions.append(suggestion);
+        });
+        return;
+      }
+      if (matchingCards.length) {
         searchStatus.textContent = "";
         return;
       }
@@ -162,6 +265,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }, 0);
     });
   } catch (error) {
+    console.error("Unable to render the menu page:", error);
     menuContent.innerHTML = '<p class="page-width menu-loading" role="alert">The menu could not be loaded. Please refresh the page to try again.</p>';
   }
 });

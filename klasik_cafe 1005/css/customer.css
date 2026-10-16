@@ -683,11 +683,6 @@
   }
 }
 
-.customer-tools {
-  padding-top: 32px;
-  padding-bottom: 48px;
-}
-
 .customer-order-page {
   padding: 52px 0 80px;
   background: linear-gradient(180deg, #f7f9ff 0%, #ffffff 100%);
@@ -724,13 +719,6 @@
 
 .order-page-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.customer-tool-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  margin-bottom: 24px;
 }
 
 .feedback-page { padding-block: 62px 86px; }
@@ -966,6 +954,20 @@
 .customer-status-preparing { background: #eaf5ff; color: var(--customer-accent); }
 .customer-status-ready { background: #ebfdf2; color: #1d6b46; }
 .customer-status-completed { background: #f0f2f6; color: #374151; }
+.customer-status-cancelled { background: #fde8e8; color: #922b2b; }
+
+.placed-orders-note {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid #d5c2f5;
+  border-radius: 12px;
+  background: #f6f1ff;
+  color: #4e3a71;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.public-review-panel { margin-top: 28px; }
 
 .customer-product-button {
   margin-top: 12px;
@@ -1096,7 +1098,6 @@
 }
 
 @media (max-width: 760px) {
-  .customer-tool-grid,
   .feedback-form-grid {
     grid-template-columns: 1fr;
   }

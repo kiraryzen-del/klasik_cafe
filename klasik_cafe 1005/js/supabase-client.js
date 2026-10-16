@@ -1,8 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 
-const projectUrl = import.meta.env.VITE_SUPABASE_URL;
-const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const environment = import.meta.env || {};
+const projectUrl = environment.VITE_SUPABASE_URL;
+const publishableKey = environment.VITE_SUPABASE_PUBLISHABLE_KEY;
+const anonKey = environment.VITE_SUPABASE_ANON_KEY;
 const publicKey = publishableKey || anonKey;
 
 export const supabaseConfigured = Boolean(projectUrl && publicKey);

@@ -172,6 +172,19 @@
   text-transform: uppercase;
 }
 
+.queue-header span[data-status="pending"],
+.detail-panel .status-tag[data-status="pending"] { color: #8a5200; background: #fff3d6; }
+.queue-header span[data-status="accepted"],
+.detail-panel .status-tag[data-status="accepted"] { color: #174ea6; background: #e7f0ff; }
+.queue-header span[data-status="preparing"],
+.detail-panel .status-tag[data-status="preparing"] { color: #7b4b00; background: #fff0d9; }
+.queue-header span[data-status="ready"],
+.detail-panel .status-tag[data-status="ready"] { color: #17633b; background: #e5f6ec; }
+.queue-header span[data-status="completed"],
+.detail-panel .status-tag[data-status="completed"] { color: #4b5563; background: #f0f2f6; }
+.queue-header span[data-status="cancelled"],
+.detail-panel .status-tag[data-status="cancelled"] { color: #922b2b; background: #fde8e8; }
+
 .queue-item p {
   margin: 0 0 10px;
   color: var(--barista-muted);
@@ -196,6 +209,8 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+.queue-action:disabled { cursor: not-allowed; opacity: .55; }
 
 .detail-panel {
   padding: 20px;

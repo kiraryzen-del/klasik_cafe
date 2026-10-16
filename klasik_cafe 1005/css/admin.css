@@ -207,7 +207,9 @@
 .availability-switch {
   position: relative;
   display: inline-flex;
-  width: 42px;
+  align-items: center;
+  gap: 9px;
+  width: auto;
   height: 24px;
   flex: 0 0 auto;
 }
@@ -220,8 +222,11 @@
 }
 
 .availability-switch-track {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  display: block;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 42px;
   border-radius: 999px;
   background: #cbd2df;
   cursor: pointer;
@@ -243,16 +248,13 @@
 .availability-switch input:checked + .availability-switch-track { background: var(--admin-accent); }
 .availability-switch input:checked + .availability-switch-track::before { transform: translateX(18px); }
 .availability-switch input:focus-visible + .availability-switch-track { outline: 3px solid rgba(30, 51, 130, .3); outline-offset: 3px; }
-.availability-switch-label { min-width: 24px; color: var(--admin-muted); }
-.availability-control.is-on .availability-switch-label { color: var(--admin-accent); }
-.product-availability-control { display: flex; flex-direction: row; justify-content: flex-start; }
-.product-availability-control > span:first-child { margin-right: auto; }
-.availability-control .availability-switch { margin: 0; }
-.admin-form label.availability-switch { display: inline-flex; flex-direction: row; gap: 0; padding: 0; }
+.availability-switch-label { min-width: 74px; color: #9b2c2c; font-size: 12px; font-weight: 700; }
+.availability-switch input:checked ~ .availability-switch-label { color: #187044; }
+.admin-product-thumbnail { display: block; width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
+.admin-form label.product-availability-control { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 
 .image-upload-field { display: flex; flex-direction: column; gap: 8px; }
-.image-upload-field > label:first-child { color: var(--admin-text); font-size: 12px; font-weight: 700; }
-.image-upload-field > input[type="text"] { width: 100%; padding: 12px 14px; background: #f9fbff; border: 1px solid var(--admin-border); border-radius: 10px; color: var(--admin-text); font: inherit; }
+.admin-field-label { color: var(--admin-text); font-size: 12px; font-weight: 700; }
 .admin-form label.image-dropzone {
   flex-direction: row;
   min-height: 120px;
@@ -274,10 +276,13 @@
 .image-dropzone input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
 .image-dropzone input:focus-visible + .image-dropzone-icon { outline: 3px solid rgba(30, 51, 130, .3); outline-offset: 3px; }
 .image-dropzone strong { color: var(--admin-text); }
+.image-dropzone-copy { display: flex; flex-direction: column; gap: 5px; }
+.image-dropzone-copy small { color: var(--admin-muted); }
 .image-dropzone-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #e7edfc; color: var(--admin-accent); font-size: 24px; }
 .image-upload-hint, .image-upload-status { margin: 0; color: var(--admin-muted); font-size: 11px; font-weight: 400; }
-.image-upload-status:not(:empty) { color: #9b2c2c; }
-.image-upload-preview { width: 120px; max-height: 100px; object-fit: cover; border: 1px solid var(--admin-border); border-radius: 8px; }
+.image-upload-status.is-error { color: #9b2c2c; }
+.image-upload-preview { display: flex; align-items: center; gap: 10px; color: var(--admin-muted); font-size: 12px; }
+.image-upload-preview img { width: 120px; height: 90px; object-fit: cover; border: 1px solid var(--admin-border); border-radius: 8px; }
 .image-upload-preview[hidden] { display: none; }
 
 .admin-review-list,
@@ -323,6 +328,82 @@
 .suggestion-status[data-status="resolved"] { color: #17633b; background: #e5f6ec; border-color: #a9dfbf; }
 .admin-status[data-status="cancelled"] { color: #922b2b; background: #fde8e8; border-color: #f3b9b9; }
 .suggestion-status { border-width: 1px; font-weight: 700; }
+
+.availability-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.availability-switch-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.availability-switch-track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #b8c0cc;
+  transition: background .2s ease;
+}
+
+.availability-switch-track::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+  transition: transform .2s ease;
+}
+
+.availability-switch-input:checked + .availability-switch-track { background: #268354; }
+.availability-switch-input:checked + .availability-switch-track::after { transform: translateX(18px); }
+.availability-switch-input:focus-visible + .availability-switch-track { outline: 3px solid rgba(30, 51, 130, .38); outline-offset: 3px; }
+
+.admin-product-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 12px;
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-product-pagination button:disabled { opacity: .45; cursor: not-allowed; }
+
+.admin-order-status {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-weight: 800;
+}
+
+.admin-order-status[data-status="pending"] { color: #8a5200; background: #fff3d6; border-color: #f1d28c; }
+.admin-order-status[data-status="accepted"] { color: #174ea6; background: #e7f0ff; border-color: #b9d1fb; }
+.admin-order-status[data-status="preparing"] { color: #7b4b00; background: #fff0d9; border-color: #f4d08b; }
+.admin-order-status[data-status="ready"] { color: #17633b; background: #e5f6ec; border-color: #a9dfbf; }
+.admin-order-status[data-status="completed"] { color: #4b5563; background: #f0f2f6; border-color: #cbd2dc; }
+.admin-order-status[data-status="cancelled"] { color: #922b2b; background: #fde8e8; border-color: #f3b9b9; }
+.admin-order-status option { color: #1f2937; background: #fff; }
+.admin-order-status option.status-option-pending { color: #8a5200; background: #fff3d6; }
+.admin-order-status option.status-option-accepted { color: #174ea6; background: #e7f0ff; }
+.admin-order-status option.status-option-preparing { color: #7b4b00; background: #fff0d9; }
+.admin-order-status option.status-option-ready { color: #17633b; background: #e5f6ec; }
+.admin-order-status option.status-option-completed { color: #4b5563; background: #f0f2f6; }
+.admin-order-status option.status-option-cancelled { color: #922b2b; background: #fde8e8; }
 
 .admin-review-item {
   display: grid;

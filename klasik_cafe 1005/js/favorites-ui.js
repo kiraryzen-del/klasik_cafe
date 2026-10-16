@@ -40,6 +40,30 @@ function saveFavorites(favorites) {
   return true;
 }
 
+function saveCustomizedFavorite(item) {
+  const customizations = item.customizations || {};
+  const addOns = Array.isArray(item.addOns) ? item.addOns : [];
+  const variant = JSON.stringify([customizations, addOns]);
+  const favorite = {
+    id: `custom:${item.productId}:${encodeURIComponent(variant)}`,
+    name: String(item.name || "Customized drink"),
+    price: Number(item.unitPrice || 0),
+    total: Number(item.total || item.unitPrice || 0),
+    quantity: Math.max(1, Number(item.quantity || 1)),
+    image: String(item.image || ""),
+    customizations,
+    addOns
+  };
+  const favorites = getFavorites();
+  const existingIndex = favorites.findIndex((saved) => String(saved.id) === favorite.id);
+  if (existingIndex >= 0) favorites[existingIndex] = favorite;
+  else favorites.push(favorite);
+  if (saveFavorites(favorites)) {
+    syncFavoriteButtons();
+    renderFavorites();
+  }
+}
+
 function favoriteFromCard(card) {
   const name = card.querySelector(".product-title h3")?.textContent.trim();
   if (!name) return null;
@@ -94,7 +118,13 @@ function renderFavorites() {
   list.innerHTML = favorites.map((favorite) => `
     <article class="customer-favorite-item">
       ${favorite.image ? `<img src="${escapeHtml(favorite.image)}" alt="" loading="lazy">` : '<div class="customer-favorite-image-placeholder" aria-hidden="true">♡</div>'}
-      <div><strong>${escapeHtml(favorite.name)}</strong><span>₱${Number(favorite.price || 0).toLocaleString("en-US")}</span></div>
+      <div>
+        <strong>${escapeHtml(favorite.name)}</strong>
+        <span>₱${Number(favorite.price || 0).toLocaleString("en-US")}${favorite.quantity > 1 ? ` each · Qty ${escapeHtml(favorite.quantity)}` : ""}</span>
+        ${favorite.customizations ? `<small>${escapeHtml(Object.entries(favorite.customizations).map(([name, value]) => `${name}: ${value}`).join(" · "))}</small>` : ""}
+        ${favorite.addOns?.length ? `<small>Add-ons: ${escapeHtml(favorite.addOns.join(", "))}</small>` : ""}
+        ${favorite.total !== undefined && favorite.quantity > 1 ? `<small>Reference total: ₱${Number(favorite.total).toLocaleString("en-US")}</small>` : ""}
+      </div>
       <div class="customer-favorite-actions">
         <a href="menu.html">View menu</a>
         <button type="button" data-favorite-remove="${escapeHtml(favorite.id)}">Remove</button>
@@ -132,6 +162,14 @@ document.addEventListener("DOMContentLoaded", () => {
       renderFavorites();
       syncFavoriteButtons();
     }
+  });
+
+  window.addEventListener("klasik:add-custom-favorite", (event) => {
+    if (!event.detail || typeof event.detail !== "object") {
+      console.error("A customized favorite was requested without item details.");
+      return;
+    }
+    saveCustomizedFavorite(event.detail);
   });
 
   const observer = new MutationObserver(() => decorateCards());

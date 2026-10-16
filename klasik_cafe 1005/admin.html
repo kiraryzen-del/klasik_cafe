@@ -6,11 +6,15 @@
   <meta name="theme-color" content="#1e3382">
   <meta name="description" content="KLASIK CAFE admin dashboard.">
   <title>Admin Dashboard | KLASIK CAFE</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
+  <script type="importmap">
+    {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
+  </script>
   <script type="module" src="js/script.js"></script>
   <script type="module" src="js/admin.js"></script>
 </head>
@@ -84,6 +88,7 @@
           <table class="data-table">
             <thead>
               <tr>
+                <th>Image</th>
                 <th>Product</th>
                 <th>Category</th>
                 <th>Price</th>
@@ -94,6 +99,7 @@
             <tbody id="admin-product-table-body"></tbody>
           </table>
         </div>
+        <div id="admin-product-pagination" class="admin-product-pagination" aria-label="Menu product pages"></div>
         <div id="supabase-menu-tools" hidden>
           <p>Browser data is never auto-cleared or imported. Export a local backup before an optional one-time menu import.</p>
           <button type="button" class="button button-outline" id="export-local-data">Download Local Data Backup</button>
@@ -227,11 +233,23 @@
             <h2>Store <em>Settings</em></h2>
           </div>
         </div>
-        <ul class="mini-list">
-          <li><span>Theme</span><strong>Royal Blue</strong></li>
-          <li><span>Mobile Menu</span><strong>Enabled</strong></li>
-          <li><span>Auto Save</span><strong>On</strong></li>
-        </ul>
+        <form id="store-settings-form" class="admin-form">
+          <label>Theme name<input type="text" id="store-theme" maxlength="80" required></label>
+          <label>Mobile menu
+            <select id="store-mobile-menu" required>
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </label>
+          <label>Auto save
+            <select id="store-auto-save" required>
+              <option value="true">On</option>
+              <option value="false">Off</option>
+            </select>
+          </label>
+          <button type="submit" class="button button-primary">Save Settings</button>
+          <p id="store-settings-message" class="form-message" role="status" aria-live="polite"></p>
+        </form>
       </section>
     </main>
   </div>
@@ -248,6 +266,8 @@
           <option value="non-coffee">Non-Coffee</option>
           <option value="matcha">Matcha Series</option>
           <option value="pastries">Pastries</option>
+          <option value="snacks">Snacks</option>
+          <option value="pasta">Pasta</option>
           <option value="add-ons">Add-ons</option>
         </select></label>
         <label>Subcategory<select id="product-subcategory">
@@ -260,13 +280,33 @@
           <option value="cheesecakes">Cheesecakes</option>
           <option value="add-ons">Add-ons</option>
         </select></label>
-        <label>Description<textarea id="product-description" rows="4"></textarea></label>
-        <label>Price<input type="number" id="product-price" min="1" step="1"></label>
-        <label>Image<input type="text" id="product-image" placeholder="image-name.jpg"></label>
-        <label>Availability<select id="product-availability">
-          <option value="Available">Available</option>
-          <option value="Unavailable">Unavailable</option>
-        </select></label>
+        <label>Description<textarea id="product-description" rows="4" required></textarea></label>
+        <label>Price<input type="number" id="product-price" min="1" step="1" required></label>
+        <div class="image-upload-field full-width">
+          <span class="admin-field-label">Product image</span>
+          <input type="hidden" id="product-image">
+          <label class="image-dropzone" id="product-image-dropzone" for="product-image-file">
+            <input type="file" id="product-image-file" accept="image/png,image/jpeg,image/webp,image/gif">
+            <span class="image-dropzone-icon" aria-hidden="true">↑</span>
+            <span class="image-dropzone-copy">
+              <strong>Drag and drop an image here</strong>
+              <span>or choose a file from your device</span>
+              <small>PNG, JPG, WEBP, or GIF · Max 5 MB</small>
+            </span>
+          </label>
+          <div class="image-upload-preview" id="product-image-preview-wrap" hidden>
+            <img id="product-image-preview" alt="Selected product preview">
+            <span id="product-image-file-name"></span>
+          </div>
+          <p class="image-upload-status" id="product-image-upload-status" aria-live="polite"></p>
+        </div>
+        <label class="product-availability-control">Availability
+          <span class="availability-switch">
+            <input type="checkbox" id="product-availability" checked>
+            <span class="availability-switch-track" aria-hidden="true"></span>
+            <span class="availability-switch-label">Available</span>
+          </span>
+        </label>
         <div class="modal-actions">
           <button type="button" class="button button-outline" id="cancel-product-modal">Cancel</button>
           <button type="submit" class="button button-primary">Add Product</button>

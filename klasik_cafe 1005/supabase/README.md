@@ -6,7 +6,7 @@ The Supabase integration is optional until credentials are configured. Without t
 
 1. Create a project at [supabase.com](https://supabase.com/) and wait for its database to finish provisioning.
 2. Open **SQL Editor** in the Supabase dashboard.
-3. Run `migrations/001_initial_schema.sql` first, followed by `migrations/002_seed_existing_menu.sql` and `migrations/003_username_availability.sql`.
+3. Run `migrations/001_initial_schema.sql` first, followed by `migrations/002_seed_existing_menu.sql`, `migrations/003_username_availability.sql`, and `migrations/004_admin_catalog_storage_and_order_status.sql`, in that order. Apply migration 004 to existing projects too; it enables customer visibility for unavailable products/add-ons, configures the product image bucket, creates admin-only persistent store settings, allows admins to accept orders, and collapses any Add-ons subcategories into the main category without deleting products.
 4. In **Project Settings → API**, copy the project URL and the **publishable key** (or legacy `anon` key).
 5. In the project root, copy `.env.example` to `.env` and fill in:
 
@@ -54,7 +54,7 @@ npx supabase link --project-ref your-project-ref
 npx supabase functions deploy admin-create-staff
 ```
 
-For a deployed website, set the `APP_ORIGIN` Edge Function secret to its exact origin (for example `https://cafe.example.com`). Local Vite origins on ports 5173 are allowed for development. Supabase supplies its URL, anon key, and service-role key to deployed Edge Functions; never add the service-role key to `.env`, frontend code, or a public repository. Set the Supabase project's **Authentication → URL Configuration → Site URL** to the website location so invitation links return to the site.
+For a deployed website, set the `APP_ORIGIN` Edge Function secret to its exact origin (for example `https://cafe.example.com`). Local Vite origins on port 5173 and Live Server origins on ports 5500 and 5501 are allowed for development. Supabase supplies its URL, anon key, and service-role key to deployed Edge Functions; never add the service-role key to `.env`, frontend code, or a public repository. Set the Supabase project's **Authentication → URL Configuration → Site URL** to the website location so invitation links return to the site.
 
 After linking the project, configure the production origin with:
 
@@ -78,6 +78,7 @@ The SQL seed reflects the existing page content, including its currently generic
 - Signup cannot select a privileged role. Only an explicitly promoted admin can manage catalog/settings; admin and barista roles can process orders.
 - Checkout calls `place_order`; PostgreSQL looks up current menu/add-on prices and validates item availability, quantities, and add-ons rather than trusting browser totals.
 - No payment provider or live payment flow is included.
+- Migration 004 makes unavailable menu products and customization add-ons visible to anonymous customers. The `place_order` database function still rejects unavailable products and add-ons. Product images are stored in the public `menu-images` bucket; only admins can upload, update, or delete objects. Apply migration 004 before using those features with Supabase.
 - Do not run unreviewed destructive SQL against a project containing records. These migrations are designed to create missing objects, preserve existing records, and avoid destructive table/data resets.
 
 ## 6. Existing LocalStorage data

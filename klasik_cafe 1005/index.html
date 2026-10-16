@@ -6,11 +6,15 @@
   <meta name="theme-color" content="#1e3382">
   <meta name="description" content="Fresh coffee, handmade pastries, and a comfortable place to slow down at KLASIK CAFE in San Ildefonso, Bulacan.">
   <title>KLASIK CAFE | Your Classic Coffee Experience</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/customer.css">
+  <script type="importmap">
+    {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
+  </script>
   <script type="module" src="js/script.js"></script>
   <script type="module" src="js/customer.js"></script>
   <script type="module" src="js/favorites-ui.js"></script>
@@ -73,52 +77,6 @@
             <h2 id="favorites-title">Featured <em>items</em></h2>
           </div>
           <p class="section-intro">A few café favorites, made fresh. Explore the full menu to find your next order.</p>
-        </div>
-        <div class="category-groups" aria-label="Menu categories">
-          <div class="category-group is-open">
-            <button class="main-category-button is-active" type="button" data-main-category="coffee">Coffee</button>
-            <div class="category-list is-open">
-              <span class="category-chip category-active" data-main-category="coffee" data-subcategory="iced-coffee" data-category="coffee">Iced Coffee</span>
-              <span class="category-chip" data-main-category="coffee" data-subcategory="hot-coffee" data-category="coffee">Hot Coffee</span>
-              <span class="category-chip" data-main-category="coffee" data-subcategory="espesyal" data-category="coffee">Espesyal</span>
-            </div>
-          </div>
-
-          <div class="category-group">
-            <button class="main-category-button" type="button" data-main-category="non-coffee">Non Coffee</button>
-            <div class="category-list">
-              <span class="category-chip" data-main-category="non-coffee" data-subcategory="non-coffee" data-category="non-coffee">Non Coffee</span>
-              <span class="category-chip" data-main-category="non-coffee" data-subcategory="espesyal2" data-category="non-coffee">Espesyal</span>
-            </div>
-          </div>
-
-          <div class="category-group">
-            <button class="main-category-button" type="button" data-main-category="matcha">Matcha Series</button>
-          </div>
-
-          <div class="category-group">
-            <button class="main-category-button" type="button" data-main-category="pastries">Pastries</button>
-            <div class="category-list">
-              <span class="category-chip" data-main-category="pastries" data-subcategory="smores" data-category="pastries">Smores</span>
-              <span class="category-chip" data-main-category="pastries" data-subcategory="cookies" data-category="pastries">Cookies</span>
-              <span class="category-chip" data-main-category="pastries" data-subcategory="cheesecakes" data-category="pastries">Cheesecakes</span>
-            </div>
-          </div>
-
-          <div class="category-group">
-            <button class="main-category-button" type="button" data-main-category="snacks">Snacks</button>
-          </div>
-
-          <div class="category-group">
-            <button class="main-category-button" type="button" data-main-category="pasta">Pasta</button>
-          </div>
-
-          <div class="category-group">
-            <button class="main-category-button" type="button" data-main-category="add-ons">Add-ons</button>
-            <div class="category-list">
-              <span class="category-chip" data-main-category="add-ons" data-subcategory="add-ons" data-category="add-ons">Add-ons</span>
-            </div>
-          </div>
         </div>
         <div class="product-grid">
 
@@ -810,40 +768,19 @@
       </div>
     </section>
 
-    <section class="customer-tools page-width" aria-label="Customer feedback tools">
-      <div class="customer-tool-grid">
-        <div class="customer-panel">
-          <div class="customer-panel-header">
-            <p class="eyebrow eyebrow-blue"><span></span> CUSTOMER REVIEW</p>
-            <h3>Reviews &amp; <em>Comments</em></h3>
+    <section class="review-showcase section-pad" aria-labelledby="review-showcase-title">
+      <div class="page-width">
+        <div class="section-heading heading-split">
+          <div>
+            <p class="eyebrow eyebrow-blue"><span></span> GUEST FEEDBACK</p>
+            <h2 id="review-showcase-title">What guests <em>say</em></h2>
           </div>
-          <div class="customer-stars" id="customer-star-picker" aria-label="Select a rating">
-            <button type="button" class="customer-star" data-rating="1" aria-label="1 star">★</button>
-            <button type="button" class="customer-star" data-rating="2" aria-label="2 stars">★</button>
-            <button type="button" class="customer-star" data-rating="3" aria-label="3 stars">★</button>
-            <button type="button" class="customer-star" data-rating="4" aria-label="4 stars">★</button>
-            <button type="button" class="customer-star" data-rating="5" aria-label="5 stars">★</button>
-          </div>
-          <input type="hidden" id="customer-review-rating" value="0">
-          <textarea id="customer-review-comment" rows="4" placeholder="Tell us about your experience..."></textarea>
-          <button class="button button-primary button-wide" id="customer-submit-review" type="button">Submit Review</button>
-          <p id="customer-review-message" class="customer-message" aria-live="polite"></p>
-          <div id="customer-review-list" class="customer-review-list"></div>
-          <p id="customer-review-realtime-status" class="customer-message" role="status" aria-live="polite"></p>
+          <p class="section-intro">A few words from guests who have visited KLASIK CAFE.</p>
         </div>
-
-        <div class="customer-panel">
-          <div class="customer-panel-header">
-            <p class="eyebrow eyebrow-blue"><span></span> SUGGESTIONS</p>
-            <h3>Send Us a <em>Suggestion</em></h3>
-          </div>
-          <label class="customer-field-label" for="customer-suggestion-subject">Subject</label>
-          <input id="customer-suggestion-subject" type="text" placeholder="Subject">
-          <label class="customer-field-label" for="customer-suggestion-message">Suggestion</label>
-          <textarea id="customer-suggestion-message" rows="4" placeholder="I would like to see more fruit-based drinks."></textarea>
-          <button class="button button-primary button-wide" id="customer-submit-suggestion" type="button">Submit Suggestion</button>
-          <p id="customer-suggestion-status" class="customer-message" aria-live="polite"></p>
-          <div id="customer-suggestion-history" class="customer-history-list"></div>
+        <div id="customer-review-list" class="review-showcase-list customer-review-list" aria-live="polite"></div>
+        <p id="customer-review-realtime-status" class="customer-message" role="status" aria-live="polite"></p>
+        <div class="featured-menu-action">
+          <a class="button button-primary" href="feedback.html">Leave a review or suggestion <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </section>
@@ -867,17 +804,15 @@
       <div class="customer-option-block">
         <h4>Size</h4>
         <div class="customer-option-row">
-          <label><input type="radio" name="custom-size" value="Small" checked> Small</label>
-          <label><input type="radio" name="custom-size" value="Medium"> Medium</label>
-          <label><input type="radio" name="custom-size" value="Large"> Large</label>
+          <label><input type="radio" name="custom-size" value="Medium" checked> Medium</label>
+          <label><input type="radio" name="custom-size" value="Large"> Large (+₱25)</label>
         </div>
       </div>
       <div class="customer-option-block">
         <h4>Milk</h4>
         <div class="customer-option-row">
           <label><input type="radio" name="custom-milk" value="Regular" checked> Regular</label>
-          <label><input type="radio" name="custom-milk" value="Oat"> Oat</label>
-          <label><input type="radio" name="custom-milk" value="Soy"> Soy</label>
+          <label><input type="radio" name="custom-milk" value="Oat"> Oat (+₱25)</label>
         </div>
       </div>
       <div class="customer-option-block">
@@ -893,19 +828,20 @@
       <div class="customer-option-block">
         <h4>Ice</h4>
         <div class="customer-option-row">
-          <label><input type="radio" name="custom-ice" value="No Ice" checked> No Ice</label>
           <label><input type="radio" name="custom-ice" value="Less Ice"> Less Ice</label>
-          <label><input type="radio" name="custom-ice" value="Regular Ice"> Regular Ice</label>
+          <label><input type="radio" name="custom-ice" value="Regular Ice" checked> Regular Ice</label>
           <label><input type="radio" name="custom-ice" value="Extra Ice"> Extra Ice</label>
         </div>
       </div>
       <div class="customer-option-block">
         <h4>Add-ons</h4>
         <div class="customer-option-row customer-option-stack">
-          <label><input type="checkbox" name="custom-addon" data-price="30" value="Extra Shot"> Extra Shot +₱30</label>
-          <label><input type="checkbox" name="custom-addon" data-price="20" value="Caramel"> Caramel +₱20</label>
-          <label><input type="checkbox" name="custom-addon" data-price="20" value="Vanilla"> Vanilla +₱20</label>
-          <label><input type="checkbox" name="custom-addon" data-price="20" value="Whipped Cream"> Whipped Cream +₱20</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Oreo"> Oreo +₱15</label>
+          <label><input type="checkbox" name="custom-addon" data-price="25" value="Biscoff"> Biscoff +₱25</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Cold Foam"> Cold Foam +₱15</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Seasalt Cream"> Seasalt Cream +₱15</label>
+          <label><input type="checkbox" name="custom-addon" data-price="25" value="Extra Shot"> Extra Shot +₱25</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Sauces Syrup"> Sauces Syrup +₱15</label>
         </div>
       </div>
       <div class="customer-option-block customer-qty-row">
@@ -917,7 +853,10 @@
         </div>
       </div>
       <div class="customer-modal-total-row"><span>Total</span><strong id="customer-modal-total">₱0</strong></div>
-      <button class="button button-primary button-wide" id="customer-add-to-order" type="button">Add to Order</button>
+      <div class="modal-actions">
+        <button class="button button-outline button-wide" id="customer-add-to-favorites" type="button">Add to Favorites</button>
+        <button class="button button-primary button-wide" id="customer-add-to-order" type="button">Add to Order</button>
+      </div>
     </div>
   </div>
 

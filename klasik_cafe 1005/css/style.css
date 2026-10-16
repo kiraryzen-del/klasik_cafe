@@ -29,6 +29,30 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .page-width { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }  
 .section-pad { padding-block: 112px; }  
 
+.klasik-dialog {
+  width: min(520px, calc(100% - 32px));
+  max-width: 520px;
+  padding: 0;
+  border: 1px solid rgba(30, 51, 130, .18);
+  border-radius: 20px;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 24px 80px rgba(19, 29, 67, .25);
+}
+
+.klasik-dialog::backdrop { background: rgba(20, 28, 52, .55); backdrop-filter: blur(3px); }
+.klasik-dialog-card { padding: 28px; }
+.klasik-dialog-card h2 { margin: 0 0 10px; color: var(--blue); font-family: var(--serif); font-size: 30px; }
+.klasik-dialog-card p { margin: 0 0 18px; color: var(--muted); }
+.klasik-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.klasik-dialog-actions .button { cursor: pointer; }
+.receipt-code { margin: 8px 0 18px !important; color: var(--blue) !important; font-size: 24px; font-weight: 800; }
+.receipt-items { margin: 0; padding: 0; list-style: none; }
+.receipt-items li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.receipt-items small { display: block; color: var(--muted); font-size: 12px; }
+.receipt-total { display: flex; justify-content: space-between; margin-top: 16px !important; color: var(--ink) !important; }
+.receipt-note { padding: 12px; border-radius: 10px; background: #f2f4fa; font-size: 13px; }
+
 .intro-screen { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; background: var(--white); opacity: 1; transition: opacity .45s ease; }
 .intro-screen.is-hidden { opacity: 0; pointer-events: none; }
 .intro-content { position: relative; top: -20px; display: flex; flex-direction: column; align-items: center; }

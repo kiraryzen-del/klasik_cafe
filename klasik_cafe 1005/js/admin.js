@@ -10,18 +10,23 @@ import {
   fetchMenuCategories,
   fetchReviews,
   fetchStaffOrders,
+  fetchStoreSettings,
   fetchSuggestions,
   moderateReview,
   saveCafeInfo,
   saveMenuAddon,
   saveMenuCategory,
   saveMenuItem,
+  saveStoreSettings,
+  uploadMenuItemImage,
+  subscribeToOrders,
   subscribeToReviews,
   setMenuItemAvailability,
   setOrderStatus,
   updateSuggestion
 } from "./supabase-data.js";
 import { downloadLocalDataBackup, importLegacyAdminMenu } from "./supabase-migration.js";
+import { themedConfirm } from "./ui-dialogs.js";
 
 "use strict";
 
@@ -32,6 +37,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     suggestions: "klasikCafeAdminSuggestions",
     cafeInfo: "klasikCafeInfo"
   };
+  const defaultStoreSettings = {
+    theme: "royal-blue",
+    mobileMenuEnabled: true,
+    autoSaveEnabled: true
+  };
+  let storeSettings = { ...defaultStoreSettings, ...loadData("klasikCafeStoreSettings", defaultStoreSettings) };
 
   const defaultProducts = [
     { id: 1, name: "Amerikano", category: "coffee", mainCategory: "coffee", subcategory: "iced-coffee", description: "Dark, smooth, and refreshing.", price: 120, image: "images/products/coffee/amerikano.jpg", available: true },
@@ -71,6 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let addons = [];
 
   const productTableBody = document.getElementById("admin-product-table-body");
+  const productPagination = document.getElementById("admin-product-pagination");
   const productSearchInput = document.getElementById("admin-product-search-input");
   const productSearchStatus = document.getElementById("admin-product-search-status");
   const productSearchSuggestions = document.getElementById("admin-product-search-suggestions");
@@ -81,9 +93,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const productForm = document.getElementById("product-form");
   const addProductTrigger = document.getElementById("add-product-trigger");
   const cancelProductModal = document.getElementById("cancel-product-modal");
+  const productImageFile = document.getElementById("product-image-file");
+  const productImageDropzone = document.getElementById("product-image-dropzone");
+  const productImagePreviewWrap = document.getElementById("product-image-preview-wrap");
+  const productImagePreview = document.getElementById("product-image-preview");
+  const productImageFileName = document.getElementById("product-image-file-name");
+  const productImageUploadStatus = document.getElementById("product-image-upload-status");
+  const productAvailability = document.getElementById("product-availability");
   const cafeForm = document.getElementById("cafe-info-form");
+  const settingsForm = document.getElementById("store-settings-form");
+  const storeSettingsMessage = document.getElementById("store-settings-message");
   const orderList = document.getElementById("admin-order-list");
   let productSearchQuery = "";
+  let currentProductPage = 1;
+  const productsPerPage = 10;
   const categoryForm = document.getElementById("menu-category-form");
   const addonForm = document.getElementById("menu-addon-form");
   const supabaseMenuTools = document.getElementById("supabase-menu-tools");
@@ -92,6 +115,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const staffInviteForm = document.getElementById("staff-invite-form");
   const staffInviteMessage = document.getElementById("staff-invite-message");
   let reviewChannelCleanup = null;
+  let orderChannelCleanup = null;
+  let selectedProductImage = null;
+  let productImagePreviewUrl = null;
 
   function loadData(key, fallback) {
     try {
@@ -130,6 +156,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function getSubcategoryOptions(mainCategory) {
+    if (mainCategory === "add-ons") return [];
     if (supabaseConfigured && categories.length) {
       const parent = categories.find((item) => item.slug === mainCategory);
       if (!parent) return [];
@@ -156,7 +183,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         { value: "cookies", label: "Cookies" },
         { value: "cheesecakes", label: "Cheesecakes" }
       ],
-      "add-ons": [{ value: "add-ons", label: "Add-ons" }]
+      snacks: [],
+      pasta: [],
+      "add-ons": []
     };
 
     return options[mainCategory] || [{ value: mainCategory, label: formatCategoryLabel(mainCategory) }];
@@ -167,6 +196,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!subcategorySelect) return;
 
     const options = getSubcategoryOptions(mainCategory);
+    const subcategoryLabel = subcategorySelect.closest("label");
+    if (subcategoryLabel) subcategoryLabel.hidden = options.length === 0;
     subcategorySelect.innerHTML = options.map((option) => `
       <option value="${option.value}" ${selectedValue === option.value ? "selected" : ""}>${option.label}</option>
     `).join("");
@@ -226,17 +257,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     productTableBody.innerHTML = products.map((product) => {
       const mainCategory = product.mainCategory || product.category || "coffee";
       const subcategory = product.subcategory || product.category || mainCategory;
+      const categoryLabel = subcategory === mainCategory
+        ? formatCategoryLabel(mainCategory)
+        : `${formatCategoryLabel(mainCategory)} / ${formatCategoryLabel(subcategory)}`;
 
       return `
         <tr>
+          <td>${product.image ? `<img class="admin-product-thumbnail" src="${escapeHtml(product.image)}" alt="" loading="lazy">` : "—"}</td>
           <td>${escapeHtml(product.name)}</td>
-          <td>${escapeHtml(formatCategoryLabel(mainCategory))} / ${escapeHtml(formatCategoryLabel(subcategory))}</td>
+          <td>${escapeHtml(categoryLabel)}</td>
           <td>₱${escapeHtml(product.price)}</td>
           <td>
-            <select class="small-select availability-select" data-product-id="${escapeHtml(product.id)}">
-              <option value="Available" ${product.available ? "selected" : ""}>Available</option>
-              <option value="Unavailable" ${!product.available ? "selected" : ""}>Unavailable</option>
-            </select>
+            <label class="availability-switch" aria-label="${product.available ? "Mark unavailable" : "Mark available"}: ${escapeHtml(product.name)}">
+              <input class="availability-switch-input" type="checkbox" data-product-id="${escapeHtml(product.id)}" ${product.available ? "checked" : ""}>
+              <span class="availability-switch-track" aria-hidden="true"></span>
+              <span class="availability-switch-label">${product.available ? "Available" : "Unavailable"}</span>
+            </label>
           </td>
           <td>
             <div class="table-actions">
@@ -254,15 +290,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!productTableBody) return;
 
     const rows = Array.from(productTableBody.querySelectorAll("tr:not([data-no-product-matches])"));
-    let matchingRows = 0;
+    const matching = [];
     rows.forEach((row) => {
       const matches = !productSearchQuery || row.textContent.toLocaleLowerCase().includes(productSearchQuery);
-      row.hidden = !matches;
-      if (matches) matchingRows += 1;
+      row.hidden = true;
+      if (matches) matching.push(row);
     });
 
     let emptyRow = productTableBody.querySelector("[data-no-product-matches]");
-    if (productSearchQuery && !matchingRows) {
+    if (productSearchQuery && !matching.length) {
       if (!emptyRow) {
         emptyRow = document.createElement("tr");
         emptyRow.dataset.noProductMatches = "true";
@@ -273,9 +309,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       emptyRow?.remove();
     }
 
+    const pageCount = Math.max(1, Math.ceil(matching.length / productsPerPage));
+    currentProductPage = Math.min(currentProductPage, pageCount);
+    matching.slice((currentProductPage - 1) * productsPerPage, currentProductPage * productsPerPage)
+      .forEach((row) => { row.hidden = false; });
+    if (productPagination) {
+      productPagination.innerHTML = pageCount > 1 ? `
+        <button class="table-button" type="button" data-product-page="${currentProductPage - 1}" ${currentProductPage === 1 ? "disabled" : ""}>Previous</button>
+        <span>Page ${currentProductPage} of ${pageCount} · ${matching.length} products</span>
+        <button class="table-button" type="button" data-product-page="${currentProductPage + 1}" ${currentProductPage === pageCount ? "disabled" : ""}>Next</button>
+      ` : matching.length ? `<span>${matching.length} product${matching.length === 1 ? "" : "s"}</span>` : "";
+    }
+
     if (!productSearchSuggestions || !productSearchStatus) return;
     productSearchSuggestions.replaceChildren();
-    if (!productSearchQuery || matchingRows) {
+    if (!productSearchQuery || matching.length) {
       productSearchStatus.textContent = "";
       return;
     }
@@ -320,6 +368,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   productSearchInput?.addEventListener("input", () => {
     productSearchQuery = productSearchInput.value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+    currentProductPage = 1;
     updateProductSearch();
   });
 
@@ -388,15 +437,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("cafe-description").value = cafeInfo.description;
   }
 
+  function populateStoreSettings() {
+    const themeInput = document.getElementById("store-theme");
+    const mobileMenuInput = document.getElementById("store-mobile-menu");
+    const autoSaveInput = document.getElementById("store-auto-save");
+    if (themeInput) themeInput.value = storeSettings.theme;
+    if (mobileMenuInput) mobileMenuInput.value = String(storeSettings.mobileMenuEnabled);
+    if (autoSaveInput) autoSaveInput.value = String(storeSettings.autoSaveEnabled);
+  }
+
   function renderOrders(orders) {
     if (!orderList) return;
+    const allowedTransitions = {
+      Pending: ["Pending", "Accepted"],
+      Accepted: ["Accepted", "Preparing", "Cancelled"],
+      Preparing: ["Preparing", "Ready", "Cancelled"],
+      Ready: ["Ready", "Completed", "Cancelled"],
+      Completed: ["Completed"],
+      Cancelled: ["Cancelled"]
+    };
     orderList.innerHTML = orders.length ? orders.map((order) => `
       <li>
         <span>Order #${escapeHtml(order.displayId)} — ${escapeHtml(order.customer)}</span>
         <strong>₱${escapeHtml(order.total)}</strong>
-        <select class="small-select admin-order-status" data-order-id="${escapeHtml(order.id)}">
+        <select class="small-select admin-order-status" data-order-id="${escapeHtml(order.id)}" data-status="${escapeHtml(order.status.toLowerCase())}">
           ${["Pending", "Accepted", "Preparing", "Ready", "Completed", "Cancelled"].map((status) =>
-            `<option value="${status}" ${order.status === status ? "selected" : ""}>${status}</option>`
+            `<option value="${status}" class="status-option-${status.toLowerCase()}" ${order.status === status ? "selected" : ""} ${allowedTransitions[order.status]?.includes(status) ? "" : "disabled"}>${status}</option>`
           ).join("")}
         </select>
       </li>
@@ -405,6 +471,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function openProductModal(product = null) {
     if (!productModal) return;
+    selectedProductImage = null;
+    if (productImageFile) productImageFile.value = "";
+    if (productImageUploadStatus) {
+      productImageUploadStatus.textContent = supabaseConfigured
+        ? "Uploads use the public Supabase Storage bucket named menu-images."
+        : "This browser stores the selected image locally.";
+      productImageUploadStatus.classList.remove("is-error");
+    }
+    if (productImagePreviewUrl) URL.revokeObjectURL(productImagePreviewUrl);
+    productImagePreviewUrl = null;
 
     const mainCategory = product ? (product.mainCategory || product.category || "coffee") : "coffee";
     const subcategory = product
@@ -419,16 +495,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("product-description").value = product.description;
       document.getElementById("product-price").value = product.price;
       document.getElementById("product-image").value = product.image;
-      document.getElementById("product-availability").value = product.available ? "Available" : "Unavailable";
+      productAvailability.checked = Boolean(product.available);
+      setProductImagePreview(product.image, "Current product image");
       document.querySelector("#product-form button[type='submit']").textContent = "Save Changes";
       document.getElementById("product-modal-title").textContent = "Edit Product";
     } else {
       productForm.reset();
       document.getElementById("product-id").value = "";
+      document.getElementById("product-image").value = "";
       const defaultMainCategory = supabaseConfigured ? (categories.find((item) => !item.parent_id)?.slug || "coffee") : "coffee";
       document.getElementById("product-main-category").value = defaultMainCategory;
       populateSubcategoryOptions(defaultMainCategory, supabaseConfigured ? null : "iced-coffee");
-      document.getElementById("product-availability").value = "Available";
+      productAvailability.checked = true;
+      setProductImagePreview("", "");
       document.querySelector("#product-form button[type='submit']").textContent = "Add Product";
       document.getElementById("product-modal-title").textContent = "Add Product";
     }
@@ -436,8 +515,74 @@ document.addEventListener("DOMContentLoaded", async () => {
     productModal.hidden = false;
   }
 
+  function setProductImagePreview(source, fileName) {
+    if (!productImagePreviewWrap || !productImagePreview || !productImageFileName) return;
+    if (!source) {
+      productImagePreviewWrap.hidden = true;
+      productImagePreview.removeAttribute("src");
+      productImageFileName.textContent = "";
+      return;
+    }
+    productImagePreview.src = source;
+    productImageFileName.textContent = fileName;
+    productImagePreviewWrap.hidden = false;
+  }
+
+  function acceptProductImage(file) {
+    if (!file) return;
+    const maxBytes = supabaseConfigured ? 5 * 1024 * 1024 : 1024 * 1024;
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
+      selectedProductImage = null;
+      if (productImageUploadStatus) {
+        productImageUploadStatus.textContent = "Choose a PNG, JPG, WEBP, or GIF image.";
+        productImageUploadStatus.classList.add("is-error");
+      }
+      if (productImageFile) productImageFile.value = "";
+      setProductImagePreview(document.getElementById("product-image").value, "Current product image");
+      return;
+    }
+    if (file.size > maxBytes) {
+      selectedProductImage = null;
+      if (productImageUploadStatus) {
+        productImageUploadStatus.textContent = `This image is larger than ${supabaseConfigured ? "5 MB" : "1 MB"}. Choose a smaller file.`;
+        productImageUploadStatus.classList.add("is-error");
+      }
+      if (productImageFile) productImageFile.value = "";
+      setProductImagePreview(document.getElementById("product-image").value, "Current product image");
+      return;
+    }
+    selectedProductImage = file;
+    if (productImagePreviewUrl) URL.revokeObjectURL(productImagePreviewUrl);
+    productImagePreviewUrl = URL.createObjectURL(file);
+    setProductImagePreview(productImagePreviewUrl, file.name);
+    if (productImageUploadStatus) {
+      productImageUploadStatus.textContent = `Ready to upload: ${file.name}`;
+      productImageUploadStatus.classList.remove("is-error");
+    }
+  }
+
+  productImageFile?.addEventListener("change", () => acceptProductImage(productImageFile.files[0]));
+  productImageDropzone?.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    productImageDropzone.classList.add("is-dragging");
+  });
+  productImageDropzone?.addEventListener("dragleave", (event) => {
+    if (!productImageDropzone.contains(event.relatedTarget)) productImageDropzone.classList.remove("is-dragging");
+  });
+  productImageDropzone?.addEventListener("drop", (event) => {
+    event.preventDefault();
+    productImageDropzone.classList.remove("is-dragging");
+    acceptProductImage(event.dataTransfer.files[0]);
+  });
+  productAvailability?.addEventListener("change", () => {
+    const label = productAvailability.closest(".availability-switch")?.querySelector(".availability-switch-label");
+    if (label) label.textContent = productAvailability.checked ? "Available" : "Unavailable";
+  });
+
   function closeProductModal() {
     if (productModal) productModal.hidden = true;
+    if (productImagePreviewUrl) URL.revokeObjectURL(productImagePreviewUrl);
+    productImagePreviewUrl = null;
   }
 
   const productMainCategory = document.getElementById("product-main-category");
@@ -449,6 +594,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   addProductTrigger.addEventListener("click", () => openProductModal());
   cancelProductModal.addEventListener("click", closeProductModal);
+  productModal?.querySelector(".modal-close")?.addEventListener("click", closeProductModal);
   productModal?.addEventListener("click", (event) => {
     if (event.target === productModal) closeProductModal();
   });
@@ -459,6 +605,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     const id = document.getElementById("product-id").value;
     const mainCategory = document.getElementById("product-main-category").value;
     const subcategory = document.getElementById("product-subcategory").value || mainCategory;
+    let image = document.getElementById("product-image").value.trim();
+    const submitButton = productForm.querySelector("button[type='submit']");
+    if (selectedProductImage) {
+      submitButton.disabled = true;
+      if (productImageUploadStatus) {
+        productImageUploadStatus.textContent = supabaseConfigured ? "Uploading image…" : "Preparing image…";
+        productImageUploadStatus.classList.remove("is-error");
+      }
+      try {
+        if (supabaseConfigured) {
+          image = await uploadMenuItemImage(selectedProductImage);
+        } else {
+          image = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.addEventListener("load", () => resolve(reader.result));
+            reader.addEventListener("error", () => reject(new Error("The image file could not be read.")));
+            reader.readAsDataURL(selectedProductImage);
+          });
+        }
+        document.getElementById("product-image").value = image;
+        selectedProductImage = null;
+        if (productImageFile) productImageFile.value = "";
+        if (productImageUploadStatus) productImageUploadStatus.textContent = "Image ready to save.";
+      } catch (error) {
+        console.error("Product image upload failed:", error);
+        if (productImageUploadStatus) {
+          productImageUploadStatus.textContent = error.message || "Unable to upload this image.";
+          productImageUploadStatus.classList.add("is-error");
+        }
+        submitButton.disabled = false;
+        return;
+      }
+    }
     const record = {
       id: id ? (supabaseConfigured ? id : Number(id)) : Date.now(),
       name: document.getElementById("product-name").value.trim(),
@@ -469,11 +648,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       subcategory,
       description: document.getElementById("product-description").value.trim(),
       price: Number(document.getElementById("product-price").value),
-      image: document.getElementById("product-image").value.trim() || "images/products/coffee.jpg",
-      available: document.getElementById("product-availability").value === "Available"
+      image,
+      available: productAvailability.checked
     };
 
     if (!record.name || !record.description || !record.price) {
+      submitButton.disabled = false;
       return;
     }
 
@@ -490,6 +670,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (error) {
         console.error("Menu item save failed:", error);
         window.alert(error.message || "Unable to save the menu item.");
+      } finally {
+        submitButton.disabled = false;
       }
       return;
     }
@@ -504,9 +686,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveData(storageKeys.products, products);
     renderProducts();
     closeProductModal();
+    submitButton.disabled = false;
   });
 
-  document.addEventListener("click", (event) => {
+  document.addEventListener("click", async (event) => {
+    const pageButton = event.target.closest("[data-product-page]");
+    if (pageButton) {
+      currentProductPage = Number(pageButton.dataset.productPage);
+      updateProductSearch();
+      return;
+    }
+
     const editButton = event.target.closest(".edit-btn");
     if (editButton) {
       const product = products.find((item) => String(item.id) === editButton.dataset.productId);
@@ -519,7 +709,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const id = supabaseConfigured ? deleteButton.dataset.productId : Number(deleteButton.dataset.productId);
       const product = products.find((item) => String(item.id) === String(id));
       if (!product) return;
-      const confirmDelete = window.confirm(`Are you sure you want to delete this product?\n${product.name}`);
+      const confirmDelete = await themedConfirm({
+        title: "Delete product?",
+        message: `This will remove ${product.name} from the menu.`,
+        confirmLabel: "Delete product"
+      });
       if (confirmDelete && supabaseConfigured) {
         deleteMenuItem(id).then(() => {
           const index = products.findIndex((item) => String(item.id) === String(id));
@@ -546,7 +740,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const id = supabaseConfigured ? reviewDeleteButton.dataset.reviewId : Number(reviewDeleteButton.dataset.reviewId);
       const review = adminReviews.find((item) => String(item.id) === String(id));
       if (!review) return;
-      const confirmDelete = window.confirm(`Are you sure you want to delete this review from ${review.customer}?`);
+      const confirmDelete = await themedConfirm({
+        title: "Delete review?",
+        message: `This will permanently remove the review from ${review.customer || "this customer"}.`,
+        confirmLabel: "Delete review"
+      });
       if (confirmDelete && supabaseConfigured) {
         deleteReview(id).then(() => {
           const index = adminReviews.findIndex((item) => String(item.id) === String(id));
@@ -579,7 +777,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const deleteAddonButton = event.target.closest(".delete-addon");
-    if (deleteAddonButton && window.confirm("Delete this customization add-on?")) {
+    if (deleteAddonButton && await themedConfirm({
+      title: "Delete add-on?",
+      message: "This will remove the customization add-on from future orders.",
+      confirmLabel: "Delete add-on"
+    })) {
       deleteMenuAddon(deleteAddonButton.dataset.addonId).then(async () => {
         addons = await fetchAllMenuAddons();
         renderAddons();
@@ -591,18 +793,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   document.addEventListener("change", async (event) => {
-    const availabilitySelect = event.target.closest(".availability-select");
-    if (availabilitySelect) {
-      const id = availabilitySelect.dataset.productId;
+    const availabilitySwitch = event.target.closest(".availability-switch-input");
+    if (availabilitySwitch) {
+      const id = availabilitySwitch.dataset.productId;
       const product = products.find((item) => String(item.id) === String(id));
       if (product) {
-        const nextAvailability = availabilitySelect.value === "Available";
+        const nextAvailability = availabilitySwitch.checked;
         try {
           if (supabaseConfigured) await setMenuItemAvailability(id, nextAvailability);
           product.available = nextAvailability;
           if (!supabaseConfigured) saveData(storageKeys.products, products);
           renderProducts();
         } catch (error) {
+          availabilitySwitch.checked = product.available;
           console.error("Menu availability update failed:", error);
           window.alert(error.message || "Unable to update availability.");
         }
@@ -644,11 +847,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (addonAvailability) {
       const addon = addons.find((item) => item.id === addonAvailability.dataset.addonId);
       if (addon) {
+        const previousValue = addon.is_available ? "Available" : "Unavailable";
         try {
-          await saveMenuAddon({ ...addon, isAvailable: addonAvailability.value === "Available" });
-          addons = await fetchAllMenuAddons();
+          const saved = await saveMenuAddon({ ...addon, isAvailable: addonAvailability.value === "Available" });
+          const index = addons.findIndex((item) => item.id === saved.id);
+          if (index >= 0) addons[index] = saved;
           renderAddons();
         } catch (error) {
+          addonAvailability.value = previousValue;
           console.error("Add-on availability update failed:", error);
           window.alert(error.message || "Unable to update add-on availability.");
         }
@@ -657,10 +863,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const orderStatusSelect = event.target.closest(".admin-order-status");
     if (orderStatusSelect) {
+      const previousStatus = orderStatusSelect.dataset.status;
+      const nextStatus = orderStatusSelect.value;
       try {
-        await setOrderStatus(orderStatusSelect.dataset.orderId, orderStatusSelect.value);
+        await setOrderStatus(orderStatusSelect.dataset.orderId, nextStatus);
         renderOrders(await fetchStaffOrders());
       } catch (error) {
+        orderStatusSelect.value = previousStatus.charAt(0).toUpperCase() + previousStatus.slice(1);
         console.error("Admin order status update failed:", error);
         window.alert(error.message || "Unable to update order status.");
       }
@@ -687,6 +896,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (error) {
       console.error("Cafe information update failed:", error);
       window.alert(error.message || "Unable to update cafe information.");
+    }
+  });
+
+  settingsForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const submitButton = settingsForm.querySelector("button[type='submit']");
+    const updatedSettings = {
+      theme: document.getElementById("store-theme").value.trim(),
+      mobileMenuEnabled: document.getElementById("store-mobile-menu").value === "true",
+      autoSaveEnabled: document.getElementById("store-auto-save").value === "true"
+    };
+    if (!updatedSettings.theme) {
+      if (storeSettingsMessage) storeSettingsMessage.textContent = "Enter a theme name.";
+      return;
+    }
+
+    submitButton.disabled = true;
+    if (storeSettingsMessage) storeSettingsMessage.textContent = "Saving settings...";
+    try {
+      if (supabaseConfigured) {
+        const saved = await saveStoreSettings(updatedSettings);
+        storeSettings = {
+          theme: saved.theme,
+          mobileMenuEnabled: saved.mobile_menu_enabled,
+          autoSaveEnabled: saved.auto_save_enabled
+        };
+      } else {
+        saveData("klasikCafeStoreSettings", updatedSettings);
+        storeSettings = updatedSettings;
+      }
+      if (storeSettingsMessage) storeSettingsMessage.textContent = "Settings saved.";
+    } catch (error) {
+      console.error("Store settings update failed:", error);
+      if (storeSettingsMessage) storeSettingsMessage.textContent = error.message || "Unable to save store settings.";
+    } finally {
+      submitButton.disabled = false;
     }
   });
 
@@ -778,7 +1023,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   document.getElementById("import-local-menu")?.addEventListener("click", async () => {
-    if (!window.confirm("Import only new custom LocalStorage menu items? Existing Supabase products will never be updated or deleted. Known demo seed products will be skipped.")) return;
+    if (!await themedConfirm({
+      title: "Import local menu items?",
+      message: "Only new custom LocalStorage menu items will be added. Existing Supabase products will not be updated or deleted, and known demo seed products will be skipped.",
+      confirmLabel: "Import items"
+    })) return;
     try {
       const result = await importLegacyAdminMenu(categories);
       const remoteCatalog = await fetchMenuCatalog();
@@ -807,14 +1056,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const access = await requireRole(["admin"]);
       if (!access) return;
-      const [remoteCategories, remoteCatalog, remoteReviews, remoteSuggestions, remoteAddons, remoteOrders, remoteCafeInfo] = await Promise.all([
+      const [remoteCategories, remoteCatalog, remoteReviews, remoteSuggestions, remoteAddons, remoteOrders, remoteCafeInfo, remoteStoreSettings] = await Promise.all([
         fetchMenuCategories(),
         fetchMenuCatalog(),
         fetchReviews({ includeModeration: true }),
         fetchSuggestions(),
         fetchAllMenuAddons(),
         fetchStaffOrders(),
-        fetchCafeInfo()
+        fetchCafeInfo(),
+        fetchStoreSettings()
       ]);
       categories = remoteCategories;
       products.splice(0, products.length, ...remoteCatalog.map((item) => ({
@@ -849,6 +1099,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           description: remoteCafeInfo.description
         });
       }
+      if (remoteStoreSettings) {
+        storeSettings = {
+          theme: remoteStoreSettings.theme,
+          mobileMenuEnabled: remoteStoreSettings.mobile_menu_enabled,
+          autoSaveEnabled: remoteStoreSettings.auto_save_enabled
+        };
+      }
       if (supabaseMenuTools) supabaseMenuTools.hidden = false;
       if (staffAccountsSection) staffAccountsSection.hidden = false;
       if (staffAccountsNav) staffAccountsNav.hidden = false;
@@ -866,6 +1123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderReviews();
   renderSuggestions();
   populateCafeInfo();
+  populateStoreSettings();
 
   if (supabaseConfigured && reviewList) {
     try {
@@ -882,6 +1140,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else if (status === "CLOSED") {
           setReviewRealtimeStatus("Live review updates disconnected.");
         }
+
       });
       window.addEventListener("pagehide", () => {
         if (!reviewChannelCleanup) return;
@@ -891,6 +1150,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (error) {
       console.error("Unable to subscribe to Supabase review updates:", error);
       setReviewRealtimeStatus("Live review updates could not be started.", true);
+    }
+  }
+
+  if (supabaseConfigured && orderList) {
+    try {
+      orderChannelCleanup = subscribeToOrders(async () => {
+        renderOrders(await fetchStaffOrders());
+      }, (status, error) => {
+        if (error) console.error(`Supabase order realtime ${status}:`, error);
+      });
+      window.addEventListener("pagehide", () => {
+        if (!orderChannelCleanup) return;
+        orderChannelCleanup().catch((error) => console.error("Unable to close the admin order channel:", error));
+        orderChannelCleanup = null;
+      }, { once: true });
+    } catch (error) {
+      console.error("Unable to subscribe to Supabase order updates:", error);
     }
   }
 });

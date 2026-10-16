@@ -6,13 +6,18 @@
   <meta name="theme-color" content="#1e3382">
   <meta name="description" content="KLASIK CAFE customer dashboard and menu ordering experience.">
   <title>Customer Dashboard | KLASIK CAFE</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/customer.css">
+  <script type="importmap">
+    {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
+  </script>
   <script type="module" src="js/script.js"></script>
   <script type="module" src="js/customer.js"></script>
+  <script type="module" src="js/favorites-ui.js"></script>
 </head>
 <body class="customer-body">
   <header class="customer-header">
@@ -27,7 +32,6 @@
         <a class="nav-link" href="favorites.html">Favorites</a>
         <a class="nav-link" href="#reviews-section">Reviews</a>
         <a class="nav-link" href="#suggestions-section">Suggestions</a>
-        <a class="nav-link" href="feedback.html">Send Feedback</a>
         <a class="nav-link" href="#profile-section">Profile</a>
         <a class="button button-primary button-small" href="login.html">Logout</a>
       </nav>
@@ -86,6 +90,7 @@
           </div>
         </div>
         <div id="customer-orders-list" class="order-list"></div>
+        <a class="button button-outline button-small" href="placed-orders.html">View Placed Orders</a>
       </div>
 
       <aside class="panel" id="profile-section" aria-labelledby="profile-title">
@@ -130,7 +135,7 @@
           <input type="hidden" id="review-rating" value="0">
           <label class="sr-only" for="review-comment">Tell us about your experience</label>
           <textarea id="review-comment" rows="5" placeholder="Tell us about your experience..."></textarea>
-          <button class="button button-primary" type="submit">Submit Review</button>
+          <button class="button button-primary" type="submit" disabled>Submit Review</button>
           <p class="form-status" id="review-status" aria-live="polite"></p>
         </form>
 
@@ -156,7 +161,7 @@
           <input id="suggestion-subject" type="text" placeholder="Subject">
           <label for="suggestion-message">Suggestion</label>
           <textarea id="suggestion-message" rows="5" placeholder="Tell us what you would like to see or improve..."></textarea>
-          <button class="button button-primary" type="submit">Submit Suggestion</button>
+          <button class="button button-primary" type="submit" disabled>Submit Suggestion</button>
           <p class="form-status" id="suggestion-status" aria-live="polite"></p>
         </form>
 
@@ -176,18 +181,16 @@
       <div class="customization-section">
         <h4>Size</h4>
         <div class="choice-row">
-          <label><input type="radio" name="size" value="Small" checked> Small</label>
-          <label><input type="radio" name="size" value="Medium"> Medium</label>
-          <label><input type="radio" name="size" value="Large"> Large</label>
+          <label><input type="radio" name="size" value="Medium" checked> Medium</label>
+          <label><input type="radio" name="size" value="Large"> Large (+₱25)</label>
         </div>
       </div>
 
       <div class="customization-section">
         <h4>Milk</h4>
         <div class="choice-row">
-          <label><input type="radio" name="milk" value="Regular Milk" checked> Regular Milk</label>
-          <label><input type="radio" name="milk" value="Oat Milk"> Oat Milk</label>
-          <label><input type="radio" name="milk" value="Soy Milk"> Soy Milk</label>
+          <label><input type="radio" name="milk" value="Regular" checked> Regular</label>
+          <label><input type="radio" name="milk" value="Oat"> Oat (+₱25)</label>
         </div>
       </div>
 
@@ -205,9 +208,8 @@
       <div class="customization-section">
         <h4>Ice</h4>
         <div class="choice-row">
-          <label><input type="radio" name="ice" value="No Ice" checked> No Ice</label>
           <label><input type="radio" name="ice" value="Less Ice"> Less Ice</label>
-          <label><input type="radio" name="ice" value="Regular Ice"> Regular Ice</label>
+          <label><input type="radio" name="ice" value="Regular Ice" checked> Regular Ice</label>
           <label><input type="radio" name="ice" value="Extra Ice"> Extra Ice</label>
         </div>
       </div>
@@ -215,10 +217,12 @@
       <div class="customization-section">
         <h4>Add-ons</h4>
         <div class="choice-row stacked">
-          <label><input type="checkbox" name="addon" data-price="30" value="Extra Shot"> Extra Shot +₱30</label>
-          <label><input type="checkbox" name="addon" data-price="20" value="Caramel"> Caramel +₱20</label>
-          <label><input type="checkbox" name="addon" data-price="20" value="Vanilla"> Vanilla +₱20</label>
-          <label><input type="checkbox" name="addon" data-price="20" value="Whipped Cream"> Whipped Cream +₱20</label>
+          <label><input type="checkbox" name="addon" data-price="15" value="Oreo"> Oreo +₱15</label>
+          <label><input type="checkbox" name="addon" data-price="25" value="Biscoff"> Biscoff +₱25</label>
+          <label><input type="checkbox" name="addon" data-price="15" value="Cold Foam"> Cold Foam +₱15</label>
+          <label><input type="checkbox" name="addon" data-price="15" value="Seasalt Cream"> Seasalt Cream +₱15</label>
+          <label><input type="checkbox" name="addon" data-price="25" value="Extra Shot"> Extra Shot +₱25</label>
+          <label><input type="checkbox" name="addon" data-price="15" value="Sauces Syrup"> Sauces Syrup +₱15</label>
         </div>
       </div>
 
@@ -239,7 +243,10 @@
         <strong id="customization-total">₱0</strong>
       </div>
 
-      <button id="add-to-order-button" class="button button-primary button-wide" type="button">Add to Order</button>
+      <div class="modal-actions">
+        <button id="add-to-favorites-button" class="button button-outline button-wide" type="button">Add to Favorites</button>
+        <button id="add-to-order-button" class="button button-primary button-wide" type="button">Add to Order</button>
+      </div>
     </div>
   </div>
 </body>

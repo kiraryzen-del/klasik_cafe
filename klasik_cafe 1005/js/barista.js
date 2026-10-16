@@ -1,6 +1,6 @@
 import { requireRole } from "./supabase-auth.js";
 import { supabaseConfigured } from "./supabase-client.js";
-import { fetchStaffOrders, setOrderStatus } from "./supabase-data.js";
+import { fetchStaffOrders, setOrderStatus, subscribeToOrders } from "./supabase-data.js";
 
 "use strict";
 
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       id: 1025,
       customer: "Maria Santos",
       items: [
-        { name: "Classic Latte", quantity: 2, customizations: { size: "Large", milk: "Oat Milk", sweetness: "25%", ice: "No Ice" }, addOns: ["Vanilla"] }
+        { name: "Classic Latte", quantity: 2, customizations: { size: "Large", milk: "Oat", sweetness: "25%", ice: "Less Ice" }, addOns: ["Oreo"] }
       ],
       specialRequest: "Extra hot.",
       total: 280,
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       id: 1026,
       customer: "Rico Tan",
       items: [
-        { name: "Mocha Frappe", quantity: 1, customizations: { size: "Large", milk: "Regular Milk", sweetness: "100%", ice: "Regular Ice" }, addOns: ["Whipped Cream"] }
+        { name: "Mocha Frappe", quantity: 1, customizations: { size: "Large", milk: "Regular", sweetness: "100%", ice: "Regular Ice" }, addOns: ["Seasalt Cream"] }
       ],
       specialRequest: "No whipped cream.",
       total: 190,
@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let orders = loadData(storageKey, defaultOrders);
   const queueContainer = document.getElementById("barista-order-queue");
   const detailPanel = document.getElementById("barista-order-detail");
+  let orderChannelCleanup = null;
   let selectedOrderId = orders[0]?.id ?? null;
 
   if (supabaseConfigured) {
@@ -66,6 +67,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!access) return;
       orders = await fetchStaffOrders();
       selectedOrderId = orders[0]?.id ?? null;
+      orderChannelCleanup = subscribeToOrders(async () => {
+        orders = await fetchStaffOrders();
+        if (!orders.some((order) => String(order.id) === String(selectedOrderId))) {
+          selectedOrderId = orders[0]?.id ?? null;
+        }
+        renderQueue();
+        renderDetail();
+      }, (status, error) => {
+        if (error) console.error(`Supabase order realtime ${status}:`, error);
+      });
+      window.addEventListener("pagehide", () => {
+        if (orderChannelCleanup) {
+          orderChannelCleanup().catch((error) => console.error("Unable to close the barista order channel:", error));
+          orderChannelCleanup = null;
+        }
+      }, { once: true });
     } catch (error) {
       console.error("Barista authorization or order loading failed:", error);
       window.alert(error.message || "Unable to load the staff order queue.");
@@ -114,14 +131,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       <article class="queue-item ${String(selectedOrderId) === String(order.id) ? "is-selected" : ""}" data-order-id="${escapeHtml(order.id)}">
         <div class="queue-header">
           <strong>Order #${escapeHtml(order.displayId ?? order.id)}</strong>
-          <span>${escapeHtml(order.status)}</span>
+          <span data-status="${escapeHtml(String(order.status).toLowerCase())}">${escapeHtml(order.status)}</span>
         </div>
         <p>Customer: ${escapeHtml(order.customer)}</p>
         <ul>
           ${order.items.map((item) => `<li>${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}</li>`).join("")}
         </ul>
-        <button class="queue-action" type="button" data-action="advance" data-order-id="${escapeHtml(order.id)}">
-          ${order.status === "Pending" ? "Accept Order" : order.status === "Accepted" ? "Start Preparing" : order.status === "Preparing" ? "Mark as Ready" : order.status === "Ready" ? "Complete Order" : "Completed"}
+        <button class="queue-action" type="button" data-action="advance" data-order-id="${escapeHtml(order.id)}" ${["Completed", "Cancelled"].includes(order.status) ? "disabled" : ""}>
+          ${order.status === "Pending" ? "Confirm Order" : order.status === "Accepted" ? "Start Preparing" : order.status === "Preparing" ? "Mark as Ready" : order.status === "Ready" ? "Complete Order" : order.status}
         </button>
       </article>
     `).join("");
@@ -170,7 +187,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     detailPanel.innerHTML = `
       <h3>Order #${escapeHtml(currentOrder.displayId ?? currentOrder.id)}</h3>
-      <div class="status-tag">${escapeHtml(currentOrder.status)}</div>
+      <div class="status-tag" data-status="${escapeHtml(String(currentOrder.status).toLowerCase())}">${escapeHtml(currentOrder.status)}</div>
       <dl>
         <dt>Customer</dt>
         <dd>${escapeHtml(currentOrder.customer)}</dd>

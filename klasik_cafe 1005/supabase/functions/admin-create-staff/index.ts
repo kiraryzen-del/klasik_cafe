@@ -3,6 +3,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const allowedOrigins = new Set([
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+  "http://localhost:5501",
+  "http://127.0.0.1:5501",
   Deno.env.get("APP_ORIGIN")
 ].filter((origin): origin is string => Boolean(origin)));
 

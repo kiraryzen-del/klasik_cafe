@@ -11,6 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/customer.css">
+  <script type="importmap">
+    {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
+  </script>
   <script type="module" src="js/script.js"></script>
   <script type="module" src="js/customer.js"></script>
   <script type="module" src="js/menu-page.js"></script>
@@ -56,17 +59,15 @@
       <div class="customer-option-block">
         <h4>Size</h4>
         <div class="customer-option-row">
-          <label><input type="radio" name="custom-size" value="Small" checked> Small</label>
-          <label><input type="radio" name="custom-size" value="Medium"> Medium</label>
-          <label><input type="radio" name="custom-size" value="Large"> Large</label>
+          <label><input type="radio" name="custom-size" value="Medium" checked> Medium</label>
+          <label><input type="radio" name="custom-size" value="Large"> Large (+₱25)</label>
         </div>
       </div>
       <div class="customer-option-block">
         <h4>Milk</h4>
         <div class="customer-option-row">
           <label><input type="radio" name="custom-milk" value="Regular" checked> Regular</label>
-          <label><input type="radio" name="custom-milk" value="Oat"> Oat</label>
-          <label><input type="radio" name="custom-milk" value="Soy"> Soy</label>
+          <label><input type="radio" name="custom-milk" value="Oat"> Oat (+₱25)</label>
         </div>
       </div>
       <div class="customer-option-block">
@@ -82,19 +83,20 @@
       <div class="customer-option-block">
         <h4>Ice</h4>
         <div class="customer-option-row">
-          <label><input type="radio" name="custom-ice" value="No Ice" checked> No Ice</label>
           <label><input type="radio" name="custom-ice" value="Less Ice"> Less Ice</label>
-          <label><input type="radio" name="custom-ice" value="Regular Ice"> Regular Ice</label>
+          <label><input type="radio" name="custom-ice" value="Regular Ice" checked> Regular Ice</label>
           <label><input type="radio" name="custom-ice" value="Extra Ice"> Extra Ice</label>
         </div>
       </div>
       <div class="customer-option-block">
         <h4>Add-ons</h4>
         <div class="customer-option-row customer-option-stack">
-          <label><input type="checkbox" name="custom-addon" data-price="30" value="Extra Shot"> Extra Shot +₱30</label>
-          <label><input type="checkbox" name="custom-addon" data-price="20" value="Caramel"> Caramel +₱20</label>
-          <label><input type="checkbox" name="custom-addon" data-price="20" value="Vanilla"> Vanilla +₱20</label>
-          <label><input type="checkbox" name="custom-addon" data-price="20" value="Whipped Cream"> Whipped Cream +₱20</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Oreo"> Oreo +₱15</label>
+          <label><input type="checkbox" name="custom-addon" data-price="25" value="Biscoff"> Biscoff +₱25</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Cold Foam"> Cold Foam +₱15</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Seasalt Cream"> Seasalt Cream +₱15</label>
+          <label><input type="checkbox" name="custom-addon" data-price="25" value="Extra Shot"> Extra Shot +₱25</label>
+          <label><input type="checkbox" name="custom-addon" data-price="15" value="Sauces Syrup"> Sauces Syrup +₱15</label>
         </div>
       </div>
       <div class="customer-option-block customer-qty-row">
@@ -106,7 +108,10 @@
         </div>
       </div>
       <div class="customer-modal-total-row"><span>Total</span><strong id="customer-modal-total">₱0</strong></div>
-      <button class="button button-primary button-wide" id="customer-add-to-order" type="button">Add to Order</button>
+      <div class="modal-actions">
+        <button class="button button-outline button-wide" id="customer-add-to-favorites" type="button">Add to Favorites</button>
+        <button class="button button-primary button-wide" id="customer-add-to-order" type="button">Add to Order</button>
+      </div>
     </div>
   </div>
 

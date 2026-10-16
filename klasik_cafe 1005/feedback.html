@@ -6,11 +6,15 @@
   <meta name="theme-color" content="#1e3382">
   <meta name="description" content="Share your KLASIK CAFE experience or send us a suggestion.">
   <title>Reviews &amp; Suggestions | KLASIK CAFE</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/customer.css">
+  <script type="importmap">
+    {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
+  </script>
   <script type="module" src="js/script.js"></script>
   <script type="module" src="js/customer.js"></script>
 </head>
@@ -28,7 +32,6 @@
         <a class="nav-link" href="menu.html">Menu</a>
         <a class="nav-link" href="index.html#story">About Us</a>
         <a class="nav-link" href="index.html#location">Location</a>
-        <a class="button button-primary button-small" href="feedback.html" aria-current="page">Reviews &amp; Suggestions</a>
         <div class="nav-actions">
           <a class="button button-outline button-small cart-trigger" href="orders.html" aria-label="Review your order">
             <span aria-hidden="true">🛒</span><span>Cart</span><span class="cart-badge" id="cart-count-badge">0</span>
@@ -45,6 +48,7 @@
       <p class="eyebrow eyebrow-blue"><span></span> WE'D LOVE TO HEAR FROM YOU</p>
       <h1>Reviews &amp; <em>Suggestions</em></h1>
       <p>Tell us about your visit or share an idea to help make KLASIK CAFE even better.</p>
+      <a class="button button-outline" href="index.html">Back to Homepage</a>
     </header>
     <div class="feedback-form-grid">
       <section class="customer-panel" aria-labelledby="feedback-review-title">
@@ -62,10 +66,10 @@
         <input type="hidden" id="customer-review-rating" value="0">
         <label class="sr-only" for="customer-review-comment">Tell us about your experience</label>
         <textarea id="customer-review-comment" rows="5" placeholder="Tell us about your experience..."></textarea>
-        <button class="button button-primary button-wide" id="customer-submit-review" type="button">Submit Review</button>
+        <button class="button button-primary button-wide" id="customer-submit-review" type="button" disabled>Submit Review</button>
         <p id="customer-review-message" class="customer-message" aria-live="polite"></p>
       </section>
-      <section class="customer-panel" aria-labelledby="feedback-suggestion-title">
+      <section id="customer-suggestion-form" class="customer-panel" aria-labelledby="feedback-suggestion-title">
         <div class="customer-panel-header">
           <p class="eyebrow eyebrow-blue"><span></span> HELP US IMPROVE</p>
           <h2 id="feedback-suggestion-title">Send a <em>suggestion</em></h2>
@@ -74,10 +78,18 @@
         <input id="customer-suggestion-subject" type="text" placeholder="Subject">
         <label class="customer-field-label" for="customer-suggestion-message">Suggestion</label>
         <textarea id="customer-suggestion-message" rows="5" placeholder="Tell us what you would like to see or improve..."></textarea>
-        <button class="button button-primary button-wide" id="customer-submit-suggestion" type="button">Submit Suggestion</button>
+        <button class="button button-primary button-wide" id="customer-submit-suggestion" type="button" disabled>Submit Suggestion</button>
         <p id="customer-suggestion-status" class="customer-message" aria-live="polite"></p>
       </section>
     </div>
+    <section id="customer-public-reviews" class="customer-panel public-review-panel" aria-labelledby="customer-public-reviews-title">
+      <div class="customer-panel-header">
+        <p class="eyebrow eyebrow-blue"><span></span> GUEST FEEDBACK</p>
+        <h2 id="customer-public-reviews-title">Customer <em>Reviews</em></h2>
+      </div>
+      <div id="customer-review-list" class="customer-review-list"></div>
+      <p id="customer-review-realtime-status" class="customer-message" role="status" aria-live="polite"></p>
+    </section>
   </main>
 
   <footer class="site-footer">

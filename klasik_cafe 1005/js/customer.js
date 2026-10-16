@@ -1,5 +1,5 @@
 import { getCurrentUser, requireRole } from "./supabase-auth.js";
-import { requireSupabase, supabaseConfigured } from "./supabase-client.js";
+import { supabaseConfigured } from "./supabase-client.js";
 import {
   applyCatalogToCards,
   createReview,
@@ -8,11 +8,14 @@ import {
   fetchCafeInfo,
   fetchMenuAddons,
   fetchMenuCatalog,
+  fetchPlacedOrders,
   fetchReviews,
   fetchSuggestions,
+  subscribeToOrders,
   subscribeToReviews,
   submitCustomerOrder
 } from "./supabase-data.js";
+import { confirmOrderReview, showOrderReceipt, themedConfirm } from "./ui-dialogs.js";
 
 "use strict";
 
@@ -23,6 +26,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const specialRequestInput = document.getElementById("customer-special-request");
   const placeOrderButton = document.getElementById("customer-place-order");
   const orderHistory = document.getElementById("customer-order-history");
+  const placedOrdersList = document.getElementById("customer-placed-orders-list");
+  const placedOrdersRealtimeStatus = document.getElementById("customer-placed-orders-realtime-status");
   const starButtons = document.querySelectorAll(".customer-star");
   const reviewRatingInput = document.getElementById("customer-review-rating");
   const reviewComment = document.getElementById("customer-review-comment");
@@ -50,17 +55,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   let activeProduct = null;
   let activeQuantity = 1;
   let activeCustomer = null;
+  let reviewAccountAllowed = false;
   let remoteOrders = null;
+  let remotePlacedOrders = null;
   let remoteReviews = null;
   let remoteSuggestions = null;
   let remoteCatalog = null;
+  let placedOrdersChannelCleanup = null;
   const remoteLoadErrors = new Map();
   const addonByName = new Map();
+  const expectedAddonPrices = new Map([
+    ["Large Size Upgrade", 25],
+    ["Oreo", 15],
+    ["Biscoff", 25],
+    ["Cold Foam", 15],
+    ["Seasalt Cream", 15],
+    ["Extra Shot", 25],
+    ["Sauces Syrup", 15],
+    ["Oat Milk Substitute", 25]
+  ]);
 
   if (supabaseConfigured && document.body.classList.contains("customer-body")) {
     try {
       activeCustomer = await requireRole(["customer"]);
       if (!activeCustomer) return;
+      reviewAccountAllowed = true;
       const profileCard = document.querySelector(".profile-card");
       if (profileCard) {
         const name = [activeCustomer.profile.first_name, activeCustomer.profile.last_name].filter(Boolean).join(" ");
@@ -83,6 +102,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       window.alert(error.message || "Unable to verify your account.");
       return;
     }
+  }
+
+  function renderPlacedOrders() {
+    if (!placedOrdersList) return;
+    const orders = remotePlacedOrders === null
+      ? getOrders().filter((order) => order.status === "Pending")
+      : remotePlacedOrders;
+    placedOrdersList.innerHTML = orders.length ? orders.map((order) => `
+      <article class="customer-history-item">
+        <div class="customer-history-head">
+          <strong>Official Receipt · Order #${escapeHtml(order.id)}</strong>
+          <span class="customer-status customer-status-${escapeHtml(String(order.status).toLowerCase())}">${escapeHtml(order.status)}</span>
+        </div>
+        <p><span>Date:</span> ${escapeHtml(order.date)}</p>
+        ${order.items.map((item) => `
+          <p>${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}</p>
+          <p>${escapeHtml(typeof item.customizations === "string" ? item.customizations : Object.entries(item.customizations || {}).filter(([key]) => key !== "special_request").map(([, value]) => value).join(" / "))}</p>
+          <p>Add-ons: ${escapeHtml(Array.isArray(item.addOns) ? item.addOns.map((addon) => typeof addon === "string" ? addon : addon.name).join(", ") || "None" : "None")}</p>
+        `).join("")}
+        <p class="customer-history-total">Total: ${money(order.total)}</p>
+        <p class="placed-orders-note">Present Order #${escapeHtml(order.id)} at the café. This order will appear in Order History after the bartender confirms it.</p>
+      </article>
+    `).join("") : '<p class="customer-empty-state">No placed orders are waiting for confirmation.</p>';
   }
 
   function loadData(key, fallback) {
@@ -118,6 +160,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       '"': "&quot;",
       "'": "&#39;"
     })[character]);
+  }
+
+  function saveCustomizedFavorite(favorite) {
+    window.dispatchEvent(new CustomEvent("klasik:add-custom-favorite", { detail: favorite }));
   }
 
   function announceError(container, message, error) {
@@ -157,7 +203,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       {
         id: 1001,
         date: "2026-10-02",
-        items: [{ name: "Classic Latte", quantity: 2, customizations: "Large • Oat • 25% • No Ice", addOns: ["Whipped Cream"], specialRequest: "Extra hot." }],
+        items: [{ name: "Classic Latte", quantity: 2, customizations: "Large • Oat • 25% • Less Ice", addOns: ["Oreo"], specialRequest: "Extra hot." }],
         total: 280,
         status: "Ready"
       },
@@ -283,7 +329,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderOrdersHistory() {
     if (!orderHistory) return;
 
-    const orders = remoteOrders === null ? getOrders() : remoteOrders;
+    const orders = remoteOrders === null ? getOrders().filter((order) => order.status !== "Pending") : remoteOrders;
     orderHistory.innerHTML = orders.length
       ? orders.map((order) => `
         <article class="customer-history-item">
@@ -315,7 +361,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!reviewList) return;
 
     const reviews = remoteReviews === null ? getReviews() : remoteReviews;
-    reviewList.innerHTML = reviews.map((review) => `
+    reviewList.innerHTML = reviews.length ? reviews.map((review) => `
       <article class="customer-review-item">
         <div class="customer-review-head">
           <strong>${escapeHtml(review.customer || "Customer")}</strong>
@@ -324,7 +370,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <p>${escapeHtml(review.comment)}</p>
         <small>${escapeHtml(review.date || new Date(review.created_at).toLocaleDateString())}</small>
       </article>
-    `).join("");
+    `).join("") : '<p class="customer-empty-state">No approved customer reviews yet.</p>';
     if (supabaseConfigured && getExistingStoredData(reviewsKey).length) {
       const notice = document.createElement("p");
       notice.className = "customer-empty-state";
@@ -421,7 +467,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="product-header"><h3>${escapeHtml(item.name)}</h3><span>₱${escapeHtml(item.price)}</span></div>
           <p>${escapeHtml(item.description)}</p>
           <span class="availability ${item.is_available ? "" : "unavailable"}">${item.is_available ? "Available" : "Unavailable"}</span>
-          <button class="button button-primary dashboard-customize" type="button" data-menu-id="${escapeHtml(item.id)}" ${item.is_available ? "" : "disabled"}>Customize</button>
+          <button class="button button-primary dashboard-customize" type="button" data-menu-id="${escapeHtml(item.id)}">Customize</button>
         </div>
       </article>
     `).join("");
@@ -447,10 +493,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     let selectedProduct = null;
     let quantity = 1;
 
+    const selectedAddonInputs = () => Array.from(dashboardModal?.querySelectorAll("input[name='addon']:checked") || []);
+    const getDashboardAutoAddons = () => [
+      ...(dashboardModal?.querySelector("input[name='size']:checked")?.value === "Large" ? ["Large Size Upgrade"] : []),
+      ...(dashboardModal?.querySelector("input[name='milk']:checked")?.value === "Oat" ? ["Oat Milk Substitute"] : [])
+    ];
     const updateTotal = () => {
       if (!selectedProduct || !totalLabel) return;
-      const addonPrice = Array.from(dashboardModal.querySelectorAll("input[name='addon']:checked"))
-        .reduce((sum, input) => sum + Number(input.dataset.price || 0), 0);
+      const addonPrice = selectedAddonInputs().reduce((sum, input) => sum + Number(input.dataset.price || 0), 0)
+        + getDashboardAutoAddons().reduce((sum, name) => sum + Number(addonByName.get(name)?.price ?? 25), 0);
       totalLabel.textContent = money((Number(selectedProduct.price) + addonPrice) * quantity);
     };
     const closeModal = () => {
@@ -471,7 +522,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       dashboardModal.querySelectorAll("input[name='addon']").forEach((input) => {
         input.checked = false;
       });
+      dashboardModal.querySelector("input[name='size'][value='Medium']")?.click();
+      dashboardModal.querySelector("input[name='milk'][value='Regular']")?.click();
+      dashboardModal.querySelector("input[name='sweetness'][value='50%']")?.click();
+      dashboardModal.querySelector("input[name='ice'][value='Regular Ice']")?.click();
       if (dashboardModal) dashboardModal.hidden = false;
+      const dashboardAddButton = document.getElementById("add-to-order-button");
+      if (dashboardAddButton) {
+        dashboardAddButton.disabled = !selectedProduct.is_available;
+        dashboardAddButton.textContent = selectedProduct.is_available ? "Add to Order" : "Unavailable";
+      }
       updateTotal();
     });
     dashboardModal?.querySelector(".modal-close")?.addEventListener("click", closeModal);
@@ -479,7 +539,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (event.target === dashboardModal) closeModal();
     });
     dashboardModal?.addEventListener("change", (event) => {
-      if (event.target.matches("input[name='addon']")) updateTotal();
+      if (event.target.matches("input[name='addon'], input[name='size'], input[name='milk']")) updateTotal();
     });
     dashboardModal?.addEventListener("click", (event) => {
       const quantityButton = event.target.closest(".qty-button");
@@ -491,7 +551,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     document.getElementById("add-to-order-button")?.addEventListener("click", () => {
-      if (!selectedProduct) return;
+      if (!selectedProduct || !selectedProduct.is_available) return;
       const selectedAddons = Array.from(dashboardModal.querySelectorAll("input[name='addon']:checked"));
       if (selectedAddons.some((input) => !input.dataset.supabaseId)) {
         window.alert("One or more selected add-ons are unavailable from Supabase. Refresh the page and try again.");
@@ -499,13 +559,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       const options = {
         size: dashboardModal.querySelector("input[name='size']:checked")?.value || "Medium",
-        milk: dashboardModal.querySelector("input[name='milk']:checked")?.value || "Regular Milk",
+        milk: dashboardModal.querySelector("input[name='milk']:checked")?.value || "Regular",
         sweetness: dashboardModal.querySelector("input[name='sweetness']:checked")?.value || "50%",
         ice: dashboardModal.querySelector("input[name='ice']:checked")?.value || "Regular Ice"
       };
-      const addonIds = selectedAddons.map((input) => input.dataset.supabaseId);
-      const addonNames = selectedAddons.map((input) => input.value);
-      const addonPrice = selectedAddons.reduce((sum, input) => sum + Number(input.dataset.price || 0), 0);
+      const automaticAddons = [
+        ...(options.size === "Large" ? ["Large Size Upgrade"] : []),
+        ...(options.milk === "Oat" ? ["Oat Milk Substitute"] : [])
+      ].map((name) => addonByName.get(name));
+      if (supabaseConfigured && automaticAddons.some((addon) => !addon?.id)) {
+        window.alert("The size or oat milk upgrade is not available from Supabase. Please refresh the page or contact the café.");
+        return;
+      }
+      const addonIds = [...selectedAddons.map((input) => input.dataset.supabaseId), ...automaticAddons.map((addon) => addon?.id).filter(Boolean)];
+      const addonNames = [...selectedAddons.map((input) => input.value), ...automaticAddons.map((addon, index) => addon?.name || automaticAddons[index])];
+      const addonPrice = selectedAddons.reduce((sum, input) => sum + Number(input.dataset.price || 0), 0)
+        + automaticAddons.reduce((sum, addon) => sum + Number(addon?.price ?? 25), 0);
       const unitPrice = Number(selectedProduct.price) + addonPrice;
       const cart = getCart();
       cart.push({
@@ -526,6 +595,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       const status = document.getElementById("customer-cart-status");
       if (status) status.textContent = "Added to your cart. Review and submit it on the Order Review page.";
     });
+
+    document.getElementById("add-to-favorites-button")?.addEventListener("click", () => {
+      if (!selectedProduct) return;
+      const options = {
+        size: dashboardModal.querySelector("input[name='size']:checked")?.value || "Medium",
+        milk: dashboardModal.querySelector("input[name='milk']:checked")?.value || "Regular",
+        sweetness: dashboardModal.querySelector("input[name='sweetness']:checked")?.value || "50%",
+        ice: dashboardModal.querySelector("input[name='ice']:checked")?.value || "Regular Ice"
+      };
+      const selectedAddons = selectedAddonInputs();
+      const automaticAddons = getDashboardAutoAddons().map((name) => addonByName.get(name));
+      const addOns = [
+        ...selectedAddons.map((input) => input.value),
+        ...automaticAddons.map((addon, index) => addon?.name || getDashboardAutoAddons()[index])
+      ];
+      const addonPrice = selectedAddons.reduce((sum, input) => sum + Number(input.dataset.price || 0), 0)
+        + automaticAddons.reduce((sum, addon) => sum + Number(addon?.price ?? 25), 0);
+      const unitPrice = Number(selectedProduct.price) + addonPrice;
+      saveCustomizedFavorite({
+        productId: selectedProduct.id,
+        name: selectedProduct.name,
+        image: selectedProduct.image_path,
+        quantity,
+        unitPrice,
+        total: unitPrice * quantity,
+        customizations: options,
+        addOns
+      });
+      closeModal();
+      const status = document.getElementById("customer-cart-status");
+      if (status) status.textContent = "Customized item saved to Favorites.";
+    });
   }
 
   function initializeDashboardFeedback() {
@@ -534,6 +635,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const commentInput = document.getElementById("review-comment");
     const reviewStatus = document.getElementById("review-status");
     const dashboardStars = document.querySelectorAll(".star-button[data-rating]");
+    const reviewSubmit = reviewForm?.querySelector("button[type='submit']");
+    const updateReviewAvailability = () => {
+      if (reviewSubmit) reviewSubmit.disabled = !reviewAccountAllowed || !Number(ratingInput?.value || 0) || !commentInput?.value.trim();
+    };
+    updateReviewAvailability();
+    commentInput?.addEventListener("input", updateReviewAvailability);
     dashboardStars.forEach((button) => {
       button.addEventListener("click", () => {
         const rating = Number(button.dataset.rating);
@@ -541,6 +648,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         dashboardStars.forEach((star) => {
           star.classList.toggle("is-active", Number(star.dataset.rating) <= rating);
         });
+        updateReviewAvailability();
       });
     });
     reviewForm?.addEventListener("submit", async (event) => {
@@ -558,6 +666,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         commentInput.value = "";
         ratingInput.value = "0";
         dashboardStars.forEach((star) => star.classList.remove("is-active"));
+        updateReviewAvailability();
         reviewStatus.textContent = "Thank you. Your review was sent for moderation.";
       } catch (error) {
         console.error("Customer dashboard review submission failed:", error);
@@ -569,6 +678,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const subjectInput = document.getElementById("suggestion-subject");
     const suggestionInput = document.getElementById("suggestion-message");
     const suggestionStatusMessage = document.getElementById("suggestion-status");
+    const suggestionSubmit = suggestionForm?.querySelector("button[type='submit']");
+    const updateSuggestionAvailability = () => {
+      if (suggestionSubmit) suggestionSubmit.disabled = !subjectInput?.value.trim() || !suggestionInput?.value.trim();
+    };
+    updateSuggestionAvailability();
+    subjectInput?.addEventListener("input", updateSuggestionAvailability);
+    suggestionInput?.addEventListener("input", updateSuggestionAvailability);
     suggestionForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const subject = subjectInput.value.trim();
@@ -583,6 +699,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderDashboardSuggestions();
         suggestionForm.reset();
         suggestionStatusMessage.textContent = "Thank you for your suggestion!";
+        updateSuggestionAvailability();
       } catch (error) {
         console.error("Customer dashboard suggestion submission failed:", error);
         suggestionStatusMessage.textContent = error.message || "Your suggestion could not be submitted.";
@@ -593,16 +710,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   function updateModalTotal() {
     if (!activeProduct || !modalTotal) return;
 
-    const addOnTotal = Array.from(document.querySelectorAll("input[name='custom-addon']:checked")).reduce((sum, checkbox) => sum + Number(checkbox.dataset.price || 0), 0);
+    const selected = Array.from(modal?.querySelectorAll("input[name='custom-addon']:checked") || []);
+    const size = modal?.querySelector("input[name='custom-size']:checked")?.value;
+    const milk = modal?.querySelector("input[name='custom-milk']:checked")?.value;
+    const automaticAddons = [
+      ...(size === "Large" ? ["Large Size Upgrade"] : []),
+      ...(milk === "Oat" ? ["Oat Milk Substitute"] : [])
+    ];
+    const addOnTotal = selected.reduce((sum, checkbox) => sum + Number(checkbox.dataset.price || 0), 0)
+      + automaticAddons.reduce((sum, name) => sum + Number(addonByName.get(name)?.price ?? 25), 0);
     const total = (Number(activeProduct.price) + addOnTotal) * activeQuantity;
     modalTotal.textContent = money(total);
   }
 
-  function openCustomization(productName, productPrice, menuItemId = null) {
-    activeProduct = { name: productName, price: productPrice, menuItemId };
+  function openCustomization(productName, productPrice, menuItemId = null, available = true, image = "") {
+    activeProduct = { name: productName, price: productPrice, menuItemId, available, image };
     activeQuantity = 1;
+    modal?.querySelectorAll("input[name='custom-addon']").forEach((input) => { input.checked = false; });
+    modal?.querySelector("input[name='custom-size'][value='Medium']")?.click();
+    modal?.querySelector("input[name='custom-milk'][value='Regular']")?.click();
+    modal?.querySelector("input[name='custom-sweetness'][value='0%']")?.click();
+    modal?.querySelector("input[name='custom-ice'][value='Regular Ice']")?.click();
     if (modal) modal.hidden = false;
     if (modalQty) modalQty.textContent = String(activeQuantity);
+    if (modalAddButton) {
+      modalAddButton.disabled = !available;
+      modalAddButton.textContent = available ? "Add to Order" : "Unavailable";
+    }
     updateModalTotal();
   }
 
@@ -641,7 +775,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const priceText = card?.querySelector(".product-title span");
       if (title && priceText) {
         const amount = parseInt(priceText.textContent.replace(/[^\d]/g, ""), 10) || 0;
-        openCustomization(title.textContent.trim(), amount, card.dataset.supabaseId || null);
+        openCustomization(
+          title.textContent.trim(),
+          amount,
+          card.dataset.supabaseId || null,
+          card.dataset.available !== "false",
+          card.querySelector(".product-image img")?.src || ""
+        );
       }
       return;
     }
@@ -673,37 +813,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  const getCustomizationDetails = () => {
+    if (!activeProduct) return null;
+    const options = {
+      size: modal.querySelector("input[name='custom-size']:checked")?.value || "Medium",
+      milk: modal.querySelector("input[name='custom-milk']:checked")?.value || "Regular",
+      sweetness: modal.querySelector("input[name='custom-sweetness']:checked")?.value || "0%",
+      ice: modal.querySelector("input[name='custom-ice']:checked")?.value || "Regular Ice"
+    };
+    const selectedAddons = Array.from(modal.querySelectorAll("input[name='custom-addon']:checked"));
+    const automaticAddons = [
+      ...(options.size === "Large" ? ["Large Size Upgrade"] : []),
+      ...(options.milk === "Oat" ? ["Oat Milk Substitute"] : [])
+    ].map((name) => addonByName.get(name));
+    const addonNames = [...selectedAddons.map((input) => input.value), ...automaticAddons.map((addon) => addon?.name).filter(Boolean)];
+    const addonIds = [...selectedAddons.map((input) => input.dataset.supabaseId), ...automaticAddons.map((addon) => addon?.id).filter(Boolean)];
+    const addonTotal = selectedAddons.reduce((sum, input) => sum + Number(input.dataset.price || 0), 0)
+      + automaticAddons.reduce((sum, addon) => sum + Number(addon?.price ?? 25), 0);
+    const unitPrice = Number(activeProduct.price) + addonTotal;
+    return { options, selectedAddons, automaticAddons, addonNames, addonIds, unitPrice, total: unitPrice * activeQuantity };
+  };
+
   if (modalAddButton) {
     modalAddButton.addEventListener("click", () => {
-      if (!activeProduct) return;
-
-      const size = document.querySelector("input[name='custom-size']:checked")?.value || "Medium";
-      const milk = document.querySelector("input[name='custom-milk']:checked")?.value || "Regular";
-      const sweetness = document.querySelector("input[name='custom-sweetness']:checked")?.value || "0%";
-      const ice = document.querySelector("input[name='custom-ice']:checked")?.value || "Regular Ice";
-      const addons = Array.from(document.querySelectorAll("input[name='custom-addon']:checked")).map((input) => input.value);
-      const addOnTotal = Array.from(document.querySelectorAll("input[name='custom-addon']:checked")).reduce((sum, input) => sum + Number(input.dataset.price || 0), 0);
-      const specialRequest = specialRequestInput ? specialRequestInput.value.trim() : "";
-      const total = (Number(activeProduct.price) + addOnTotal) * activeQuantity;
-      const selectedAddons = Array.from(document.querySelectorAll("input[name='custom-addon']:checked"));
-      if (supabaseConfigured && selectedAddons.some((input) => !input.dataset.supabaseId)) {
-        window.alert("One or more selected add-ons are not available from Supabase. Refresh the menu before adding them.");
+      if (!activeProduct || !activeProduct.available) return;
+      const details = getCustomizationDetails();
+      if (!details) return;
+      if (supabaseConfigured && details.addonIds.some((id) => !id)) {
+        window.alert("One or more selected customizations are not available from Supabase. Refresh the menu before adding them.");
         return;
       }
-
+      const specialRequest = specialRequestInput ? specialRequestInput.value.trim() : "";
       const cart = getCart();
       cart.push({
-        id: Date.now(),
+        id: crypto.randomUUID(),
         name: activeProduct.name,
         quantity: activeQuantity,
-        customizations: `${size} • ${milk} • ${sweetness} • ${ice}`,
-        addOns: addons,
-        addonIds: selectedAddons.map((input) => input.dataset.supabaseId).filter(Boolean),
+        customizations: Object.values(details.options).join(" • "),
+        addOns: details.addonNames,
+        addonIds: details.addonIds,
         menuItemId: activeProduct.menuItemId,
-        customizationOptions: { size, milk, sweetness, ice },
+        customizationOptions: details.options,
         specialRequest,
-        total,
-        unitPrice: Number(activeProduct.price) + addOnTotal
+        total: details.total,
+        unitPrice: details.unitPrice
       });
 
       setCart(cart);
@@ -712,38 +865,95 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  document.getElementById("customer-add-to-favorites")?.addEventListener("click", () => {
+    if (!activeProduct) return;
+    const details = getCustomizationDetails();
+    if (!details) return;
+    saveCustomizedFavorite({
+      productId: activeProduct.menuItemId || activeProduct.name,
+      name: activeProduct.name,
+      image: activeProduct.image,
+      quantity: activeQuantity,
+      unitPrice: details.unitPrice,
+      total: details.total,
+      customizations: details.options,
+      addOns: details.addonNames
+    });
+    closeCustomization();
+  });
+
   if (placeOrderButton) {
     placeOrderButton.addEventListener("click", async () => {
       const cart = getCart();
       if (!cart.length) return;
 
+      const orderTotalValue = cart.reduce((sum, item) => sum + Number(item.total || 0), 0);
+      const confirmed = await confirmOrderReview({
+        items: cart,
+        total: orderTotalValue
+      });
+      if (!confirmed) return;
+      placeOrderButton.disabled = true;
+
       if (supabaseConfigured) {
+        let receipt;
+        let orderWasPlaced = false;
         try {
           const user = await getCurrentUser();
           if (!user) {
-            window.alert("Please log in before placing an order.");
-            window.location.href = "login.html";
+            const goToLogin = await themedConfirm({
+              title: "Log in to place your order",
+              message: "Your cart will stay saved. Log in or create a customer account to submit this order.",
+              confirmLabel: "Go to Login",
+              cancelLabel: "Keep Shopping"
+            });
+            if (goToLogin) window.location.href = "login.html";
             return;
           }
-          await submitCustomerOrder(cart, specialRequestInput?.value.trim() || "");
+          try {
+            receipt = await submitCustomerOrder(cart, specialRequestInput?.value.trim() || "");
+          } catch (error) {
+            console.error("Order submission failed:", error);
+            window.alert(error.message || "Your order could not be submitted. Your cart has been kept.");
+            return;
+          }
+          orderWasPlaced = true;
+
           setCart([]);
           if (specialRequestInput) specialRequestInput.value = "";
-          remoteOrders = await fetchCustomerOrders();
           updateCartBadge();
           renderCart();
-          renderOrdersHistory();
+          try {
+            remoteOrders = await fetchCustomerOrders();
+            if (placedOrdersList) remotePlacedOrders = await fetchPlacedOrders();
+            renderOrdersHistory();
+            renderPlacedOrders();
+          } catch (error) {
+            console.error("Order placed but the order list could not refresh:", error);
+            if (placedOrdersRealtimeStatus) {
+              placedOrdersRealtimeStatus.textContent = "Your order was placed, but the list could not refresh. Reload this page to check its status.";
+            }
+            window.alert(`Order #${receipt.orderNumber} was placed, but the order list could not refresh. Your receipt code is still valid.`);
+          }
+          await showOrderReceipt({
+            orderNumber: receipt.orderNumber,
+            items: cart,
+            total: receipt.total
+          });
           return;
         } catch (error) {
-          console.error("Order submission failed:", error);
-          window.alert(error.message || "Your order could not be submitted. Your cart has been kept.");
+          console.error(orderWasPlaced ? "Order placed but checkout confirmation failed:" : "Order account verification failed:", error);
+          window.alert(orderWasPlaced
+            ? `Order #${receipt.orderNumber} was placed, but its receipt could not be displayed. Go to Placed Orders to find the code.`
+            : error.message || "Unable to verify your account.");
           return;
+        } finally {
+          placeOrderButton.disabled = false;
         }
       }
 
       const orders = getOrders();
       const nextId = orders.length ? Math.max(...orders.map((order) => Number(order.id))) + 1 : 1001;
-      const orderTotalValue = cart.reduce((sum, item) => sum + Number(item.total || 0), 0);
-
       orders.unshift({
         id: nextId,
         date: new Date().toISOString().slice(0, 10),
@@ -764,10 +974,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateCartBadge();
       renderCart();
       renderOrdersHistory();
+      remotePlacedOrders = null;
+      renderPlacedOrders();
+      await showOrderReceipt({
+        orderNumber: nextId,
+        items: cart,
+        total: orderTotalValue
+      });
+      placeOrderButton.disabled = false;
     });
   }
 
   if (submitReviewButton) {
+    const updateReviewButton = () => {
+      submitReviewButton.disabled = !reviewAccountAllowed || !Number(reviewRatingInput?.value || 0) || !reviewComment?.value.trim();
+    };
+    updateReviewButton();
+    reviewComment?.addEventListener("input", updateReviewButton);
     submitReviewButton.addEventListener("click", async () => {
       const rating = Number(reviewRatingInput.value || 0);
       const comment = reviewComment.value.trim();
@@ -777,37 +1000,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      const review = {
-        id: Date.now(),
-        customer: "Guest",
-        rating,
-        comment,
-        date: new Date().toISOString().slice(0, 10)
-      };
-
-      if (supabaseConfigured) {
-        try {
-          const user = await getCurrentUser();
-          if (!user) {
-            window.alert("Please log in before submitting a review.");
-            window.location.href = "login.html";
-            return;
-          }
-          await createReview(user.id, rating, comment);
-          remoteReviews = await fetchReviews({
-            includeModeration: Boolean(document.getElementById("customer-review-history"))
-          });
-          if (reviewMessage) reviewMessage.textContent = "Thank you. Your review was sent for moderation.";
-        } catch (error) {
-          console.error("Review submission failed:", error);
-          if (reviewMessage) reviewMessage.textContent = error.message || "Your review could not be submitted.";
+      try {
+        const customer = activeCustomer || (supabaseConfigured ? await requireRole(["customer"]) : null);
+        if (!customer?.user) {
+          if (reviewMessage) reviewMessage.textContent = "Please log in with a customer account before submitting a review.";
           return;
         }
-      } else {
-        const reviews = getReviews();
-        reviews.unshift(review);
-        saveReviews(reviews);
-        if (reviewMessage) reviewMessage.textContent = "Thank you for your review!";
+        await createReview(customer.user.id, rating, comment);
+        remoteReviews = await fetchReviews({
+          includeModeration: Boolean(document.getElementById("customer-review-history"))
+        });
+        if (reviewMessage) reviewMessage.textContent = "Thank you. Your review was sent for moderation.";
+      } catch (error) {
+        console.error("Review submission failed:", error);
+        if (reviewMessage) reviewMessage.textContent = error.message || "Your review could not be submitted.";
+        return;
       }
 
       renderReviewsList();
@@ -815,6 +1022,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       reviewComment.value = "";
       reviewRatingInput.value = "0";
       starButtons.forEach((button) => button.classList.remove("is-active"));
+      reviewAccountAllowed = true;
+      updateReviewButton();
     });
   }
 
@@ -825,10 +1034,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       starButtons.forEach((star) => {
         star.classList.toggle("is-active", Number(star.dataset.rating) <= rating);
       });
+      if (submitReviewButton) submitReviewButton.disabled = !reviewAccountAllowed || !reviewComment?.value.trim();
     });
   });
 
   if (submitSuggestionButton) {
+    const updateSuggestionButton = () => {
+      submitSuggestionButton.disabled = !suggestionSubject?.value.trim() || !suggestionInput?.value.trim();
+    };
+    updateSuggestionButton();
+    suggestionSubject?.addEventListener("input", updateSuggestionButton);
+    suggestionInput?.addEventListener("input", updateSuggestionButton);
     submitSuggestionButton.addEventListener("click", async () => {
       const subject = suggestionSubject.value.trim();
       const message = suggestionInput.value.trim();
@@ -868,6 +1084,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       suggestionSubject.value = "";
       suggestionInput.value = "";
       if (suggestionStatus) suggestionStatus.textContent = "Thank you for your suggestion!";
+      updateSuggestionButton();
     });
   }
 
@@ -887,27 +1104,71 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     try {
       const addons = await fetchMenuAddons();
-      addons.forEach((addon) => addonByName.set(addon.name, addon));
+      const missingAddons = new Set();
+      addons.forEach((addon) => {
+        addonByName.set(addon.name, addon);
+      });
+      expectedAddonPrices.forEach((_, name) => {
+        if (!addonByName.has(name)) missingAddons.add(name);
+      });
       document.querySelectorAll("input[name='custom-addon'], input[name='addon']").forEach((input) => {
         const addon = addonByName.get(input.value);
-        if (!addon) return;
+        if (!addon) {
+          input.disabled = true;
+          input.checked = false;
+          if (input.closest("label")) input.closest("label").lastChild.textContent = ` ${input.value} (unavailable)`;
+          return;
+        }
         input.dataset.supabaseId = addon.id;
         input.dataset.price = String(addon.price);
+        input.disabled = !addon.is_available;
+        if (input.disabled) input.checked = false;
         const label = input.closest("label");
-        if (label) label.lastChild.textContent = ` ${addon.name} +₱${addon.price}`;
+        if (label) label.lastChild.textContent = addon.is_available
+          ? ` ${addon.name} +₱${addon.price}`
+          : ` ${addon.name} (unavailable)`;
       });
+      for (const [selector, addonName, labelText] of [
+        ["input[name='custom-size'][value='Large'], input[name='size'][value='Large']", "Large Size Upgrade", "Large"],
+        ["input[name='custom-milk'][value='Oat'], input[name='milk'][value='Oat']", "Oat Milk Substitute", "Oat"]
+      ]) {
+        document.querySelectorAll(selector).forEach((input) => {
+          const addon = addonByName.get(addonName);
+          input.disabled = !addon?.is_available;
+          const label = input.closest("label");
+          if (label) label.lastChild.textContent = addon?.is_available
+            ? ` ${labelText} (+₱${addon.price})`
+            : ` ${labelText} (unavailable)`;
+        });
+      }
+      if (missingAddons.size) {
+        const warning = document.createElement("p");
+        warning.className = "customer-empty-state";
+        warning.dataset.addonMigrationWarning = "true";
+        warning.setAttribute("role", "alert");
+        warning.textContent = "Some requested customization options are missing from Supabase. Ask the administrator to apply migration 003_order_workflow_and_customizations.sql.";
+        document.querySelectorAll("#customer-customization-modal, #customization-modal").forEach((customizationModal) => {
+          customizationModal.querySelector(".customer-option-block h4")?.parentElement?.append(warning.cloneNode(true));
+          customizationModal.querySelector(".customization-section h4")?.parentElement?.append(warning.cloneNode(true));
+        });
+      }
     } catch (error) {
       announceError(document.querySelector(".customer-option-stack, .choice-row.stacked"), "Supabase customization add-ons could not be loaded.", error);
     }
 
-    if (orderHistory || document.getElementById("customer-orders-list")) {
+    if (orderHistory || placedOrdersList || document.getElementById("customer-orders-list")) {
       try {
         const user = await getCurrentUser();
         remoteOrders = user ? await fetchCustomerOrders() : [];
+        remotePlacedOrders = user && placedOrdersList ? await fetchPlacedOrders() : [];
+        if (!user && placedOrdersRealtimeStatus) {
+          placedOrdersRealtimeStatus.textContent = "Log in to see orders placed on your account.";
+        }
       } catch (error) {
         remoteLoadErrors.set("orders", `Supabase order history could not be loaded: ${error.message || "Unknown error."}`);
         announceError(orderHistory || document.getElementById("customer-orders-list"), "Supabase order history could not be loaded.", error);
         remoteOrders = [];
+        remotePlacedOrders = [];
       }
     }
     if (reviewList || reviewHistory) {
@@ -979,8 +1240,60 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   renderCart();
   renderOrdersHistory();
+  renderPlacedOrders();
   renderReviewsList();
   renderSuggestionsList();
+
+  if (submitReviewButton && supabaseConfigured) {
+    try {
+      const user = await getCurrentUser();
+      reviewAccountAllowed = Boolean(user);
+      if (!reviewAccountAllowed) {
+        submitReviewButton.disabled = true;
+        if (reviewMessage) reviewMessage.innerHTML = 'Please <a href="login.html">log in</a> with a customer account to submit a review.';
+      } else {
+        submitReviewButton.disabled = !Number(reviewRatingInput?.value || 0) || !reviewComment?.value.trim();
+      }
+    } catch (error) {
+      console.error("Review account verification failed:", error);
+      submitReviewButton.disabled = true;
+      if (reviewMessage) reviewMessage.textContent = "Unable to verify your account. Please sign in again.";
+    }
+  } else if (submitReviewButton) {
+    reviewAccountAllowed = false;
+    submitReviewButton.disabled = true;
+    if (reviewMessage) reviewMessage.innerHTML = 'Sign in with a customer account to submit a review. <a href="login.html">Log in</a>';
+  }
+
+  if (placedOrdersList && supabaseConfigured) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        placedOrdersChannelCleanup = subscribeToOrders(async () => {
+          remotePlacedOrders = await fetchPlacedOrders();
+          remoteOrders = await fetchCustomerOrders();
+          renderPlacedOrders();
+          renderOrdersHistory();
+          renderDashboardOrders();
+        }, (status, error) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CALLBACK_ERROR") {
+            console.error("Placed order live updates failed:", status, error);
+            if (placedOrdersRealtimeStatus) placedOrdersRealtimeStatus.textContent = "Live updates are unavailable. Refresh to see the latest order status.";
+          } else if (status === "SUBSCRIBED" && placedOrdersRealtimeStatus) {
+            placedOrdersRealtimeStatus.textContent = "Live order updates connected.";
+          }
+        });
+        window.addEventListener("pagehide", () => {
+          if (!placedOrdersChannelCleanup) return;
+          placedOrdersChannelCleanup().catch((error) => console.error("Unable to close the placed-order channel:", error));
+          placedOrdersChannelCleanup = null;
+        }, { once: true });
+      }
+    } catch (error) {
+      console.error("Placed order live updates could not start:", error);
+      if (placedOrdersRealtimeStatus) placedOrdersRealtimeStatus.textContent = "Live updates are unavailable. Refresh to see the latest order status.";
+    }
+  }
 
   if (supabaseConfigured && (reviewList || reviewHistory)) {
     let reviewChannelCleanup;

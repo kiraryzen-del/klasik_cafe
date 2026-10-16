@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
         menuSection.querySelectorAll(".product-card[data-main-category], .product-card[data-category], .product-card[data-best-seller]").forEach((card) => {
           const cardMainCategory = normalizeMainCategory(card.dataset.mainCategory || card.dataset.category);
           const isBestSeller = selectedMainCategory === "best-sellers" && card.dataset.bestSeller === "true";
-          card.hidden = card.dataset.available === "false" || (!isBestSeller && cardMainCategory !== selectedMainCategory);
+          card.hidden = !isBestSeller && cardMainCategory !== selectedMainCategory;
         });
       }
       return;
@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const isBestSeller = selectedMainCategory === "best-sellers" && card.dataset.bestSeller === "true";
       const matchesMainCategory = cardMainCategory === selectedMainCategory;
       const matchesSubcategory = !selectedSubcategory || cardSubcategory === selectedSubcategory || (!card.dataset.subcategory && cardSubcategory === selectedSubcategory);
-      const shouldShow = card.dataset.available !== "false" && (isBestSeller || (matchesMainCategory && matchesSubcategory));
+      const shouldShow = isBestSeller || (matchesMainCategory && matchesSubcategory);
       card.hidden = !shouldShow;
     });
   });

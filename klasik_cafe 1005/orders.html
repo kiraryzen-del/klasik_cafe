@@ -6,11 +6,15 @@
   <meta name="theme-color" content="#1e3382">
   <meta name="description" content="Review your KLASIK CAFE order and past orders.">
   <title>Order Review | KLASIK CAFE</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/customer.css">
+  <script type="importmap">
+    {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
+  </script>
   <script type="module" src="js/script.js"></script>
   <script type="module" src="js/customer.js"></script>
 </head>
@@ -51,6 +55,7 @@
       <div class="customer-page-switcher" aria-label="Order page navigation">
         <a class="button button-outline button-small" href="favorites.html">Favorites</a>
         <a class="button button-primary button-small" href="orders.html">Order Review</a>
+        <a class="button button-outline button-small" href="placed-orders.html">Placed Orders</a>
         <a class="button button-outline button-small" href="order-history.html">Order History</a>
       </div>
 
@@ -64,6 +69,7 @@
         <label class="customer-field-label" for="customer-special-request">Special Request</label>
         <textarea id="customer-special-request" rows="3" placeholder="Please write any special instructions..."></textarea>
         <button class="button button-primary button-wide" id="customer-place-order" type="button">Place Order</button>
+        <p class="placed-orders-note">After placing your order, present the official receipt and order code at the café. A bartender must confirm it before it appears in Order History.</p>
       </div>
     </section>
   </main>

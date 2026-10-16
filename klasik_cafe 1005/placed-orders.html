@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3382">
+  <meta name="description" content="View your placed KLASIK CAFE orders awaiting staff confirmation.">
+  <title>Placed Orders | KLASIK CAFE</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/customer.css">
+  <script type="importmap">
+    {"imports":{"@supabase/supabase-js":"https://esm.sh/@supabase/supabase-js@2.57.0"}}
+  </script>
+  <script type="module" src="js/script.js"></script>
+  <script type="module" src="js/customer.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-wrap">
+      <a class="brand" href="index.html" aria-label="KLASIK CAFE home"><img class="brand-logo" src="klasik_cafe_logo_3_-removebg-preview.png" alt="KLASIK CAFE logo"></a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primary-nav"><span></span><span></span><span></span></button>
+      <nav id="primary-nav" class="primary-nav" aria-label="Main navigation">
+        <a class="nav-link" href="index.html#home">Home</a><a class="nav-link" href="menu.html">Menu</a>
+        <a class="nav-link" href="index.html#story">About Us</a><a class="nav-link" href="index.html#location">Location</a>
+        <div class="nav-actions">
+          <a class="button button-outline button-small cart-trigger" href="orders.html" aria-label="Review your order"><span aria-hidden="true">🛒</span><span>Cart</span><span class="cart-badge" id="cart-count-badge">0</span></a>
+          <a class="button button-outline button-small" href="login.html">Login</a><a class="button button-primary button-small" href="signup.html">Sign Up</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+  <main class="customer-order-page">
+    <section class="page-width customer-order-shell" aria-labelledby="placed-orders-title">
+      <div class="customer-page-heading"><p class="eyebrow eyebrow-blue"><span></span> AWAITING CAFE CONFIRMATION</p><h1 id="placed-orders-title">Placed <em>Orders</em></h1></div>
+      <div class="customer-page-switcher" aria-label="Order page navigation">
+        <a class="button button-outline button-small" href="orders.html">Order Review</a>
+        <a class="button button-primary button-small" href="placed-orders.html" aria-current="page">Placed Orders</a>
+        <a class="button button-outline button-small" href="order-history.html">Order History</a>
+      </div>
+      <div class="customer-panel customer-history-panel">
+        <div class="customer-panel-header"><p class="eyebrow eyebrow-blue"><span></span> PENDING ORDERS</p><h3>Awaiting <em>Confirmation</em></h3></div>
+        <p class="placed-orders-note">Please present your official receipt and order code at the café. A bartender must confirm your order before it appears in Order History.</p>
+        <div id="customer-placed-orders-list" class="customer-history-list" aria-live="polite"></div>
+        <p id="customer-placed-orders-realtime-status" class="customer-message" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="page-width footer-bottom"><span>© 2026 KLASIK CAFE. All Rights Reserved.</span></div></footer>
+</body>
+</html>
