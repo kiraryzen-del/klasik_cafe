@@ -94,3 +94,6 @@ The project retains its existing homepage, login, sign-up, menu, customer, admin
 
 ## Session Maintenance
 When project files, behavior, scope, or decisions change, update these notes during that work session so the next chat starts with accurate context. Record meaningful decisions, current behavior, validation performed, and remaining work; remove details that are no longer true.
+
+- The homepage header and intro landing screen use the owner's `public/videos/klasik_logo_vid.gif` animated logo. The header image remains inside the homepage link. Footer logos and logos on other pages remain still images. `npm.cmd run build` passed; the GIF was verified to contain 240 frames and an infinite-loop extension, and the built asset was checked.
+- The shared sticky site header now uses a solid white background with no transparency or blur. `npm.cmd run build` passed after the change.
